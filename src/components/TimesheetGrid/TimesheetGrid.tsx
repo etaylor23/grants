@@ -8,7 +8,7 @@ import {
   NumberCell,
 } from "@silevis/reactgrid";
 import "@silevis/reactgrid/styles.css";
-import { Box, Card, Typography, Alert, Snackbar } from "@mui/material";
+import { Box, Card, Typography, Alert, Snackbar, Button, Stack } from "@mui/material";
 import { useTimeSlots, useBatchUpdateTimeSlots } from "../../api/hooks";
 import { mockGrants } from "../../api/mockData";
 import { TimeSlot, TimeSlotBatch, ApiError } from "../../models/types";
@@ -16,19 +16,35 @@ import { format, eachDayOfInterval, startOfMonth, endOfMonth } from "date-fns";
 
 interface TimesheetGridProps {
   userId: string;
+  startDate?: Date;
+  endDate?: Date;
+  disabledDates?: string[];
+  showCard?: boolean;
+  showRowColumnControls?: boolean;
+  title?: string;
 }
 
-export const TimesheetGrid: React.FC<TimesheetGridProps> = ({ userId }) => {
+export const TimesheetGrid: React.FC<TimesheetGridProps> = ({
+  userId,
+  startDate,
+  endDate,
+  disabledDates = [],
+  showCard = true,
+  showRowColumnControls = false,
+  title
+}) => {
   const [error, setError] = useState<string | null>(null);
+  const [selectedCell, setSelectedCell] = useState<{ rowId: string; columnId: string; value: number } | null>(null);
+
   const currentDate = new Date();
-  const monthStart = startOfMonth(currentDate);
-  const monthEnd = endOfMonth(currentDate);
-  const monthDays = eachDayOfInterval({ start: monthStart, end: monthEnd });
+  const periodStart = startDate || startOfMonth(currentDate);
+  const periodEnd = endDate || endOfMonth(currentDate);
+  const periodDays = eachDayOfInterval({ start: periodStart, end: periodEnd });
 
   const { data: timeSlots = [], refetch } = useTimeSlots(
     userId,
-    format(monthStart, "yyyy-MM-dd"),
-    format(monthEnd, "yyyy-MM-dd")
+    format(periodStart, "yyyy-MM-dd"),
+    format(periodEnd, "yyyy-MM-dd")
   );
 
   const batchUpdateMutation = useBatchUpdateTimeSlots();
@@ -37,7 +53,7 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({ userId }) => {
   const columns: Column[] = useMemo(() => {
     const cols: Column[] = [{ columnId: "grant", width: 150 }];
 
-    monthDays.forEach((day) => {
+    periodDays.forEach((day) => {
       cols.push({
         columnId: format(day, "yyyy-MM-dd"),
         width: 80,
@@ -45,14 +61,14 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({ userId }) => {
     });
 
     return cols;
-  }, [monthDays]);
+  }, [periodDays]);
 
   const rows: Row[] = useMemo(() => {
     const headerRow: Row = {
       rowId: "header",
       cells: [
         { type: "header", text: "Grant" } as HeaderCell,
-        ...monthDays.map(
+        ...periodDays.map(
           (day) =>
             ({
               type: "header",
@@ -67,18 +83,20 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({ userId }) => {
         { type: "text", text: grant.name } as TextCell,
       ];
 
-      monthDays.forEach((day) => {
+      periodDays.forEach((day) => {
         const dateStr = format(day, "yyyy-MM-dd");
         const slot = timeSlots.find(
           (s) => s.date === dateStr && s.grantId === grant.id
         );
+        const isDisabled = disabledDates.includes(dateStr);
 
         cells.push({
           type: "number",
           value: slot?.allocationPercent || 0,
           date: dateStr,
           grantId: grant.id,
-        } as NumberCell & { date: string; grantId: string });
+          nonEditable: isDisabled,
+        } as NumberCell & { date: string; grantId: string; nonEditable?: boolean });
       });
 
       return {
@@ -92,7 +110,7 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({ userId }) => {
       rowId: "total",
       cells: [
         { type: "header", text: "Total %" } as HeaderCell,
-        ...monthDays.map((day) => {
+        ...periodDays.map((day) => {
           const dateStr = format(day, "yyyy-MM-dd");
           const daySlots = timeSlots.filter((s) => s.date === dateStr);
           const total = daySlots.reduce(
@@ -109,7 +127,79 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({ userId }) => {
     };
 
     return [headerRow, ...grantRows, totalRow];
-  }, [monthDays, timeSlots]);
+  }, [periodDays, timeSlots, disabledDates]);
+
+  // Row and column operations
+  const applyToRow = useCallback(() => {
+    if (!selectedCell) return;
+
+    const { rowId, value } = selectedCell;
+    const changes: any[] = [];
+
+    // Find all cells in the row (excluding the grant name column)
+    const targetRow = rows.find(row => row.rowId === rowId);
+    if (!targetRow) return;
+
+    targetRow.cells.forEach((cell, index) => {
+      if (index === 0) return; // Skip grant name column
+
+      const columnId = columns[index].columnId;
+      const dateStr = String(columnId);
+
+      // Skip disabled dates
+      if (disabledDates.includes(dateStr)) return;
+
+      if (cell.type === "number") {
+        changes.push({
+          rowId,
+          columnId: String(columnId),
+          newCell: {
+            ...cell,
+            value: value,
+          }
+        });
+      }
+    });
+
+    if (changes.length > 0) {
+      handleChanges(changes);
+    }
+  }, [selectedCell, rows, columns, disabledDates]);
+
+  const applyToColumn = useCallback(() => {
+    if (!selectedCell) return;
+
+    const { columnId, value } = selectedCell;
+    const changes: any[] = [];
+
+    // Skip if it's the grant column or a disabled date
+    if (columnId === "grant" || disabledDates.includes(String(columnId))) return;
+
+    // Apply to all grant rows (excluding header and total rows)
+    mockGrants.forEach((grant) => {
+      const targetRow = rows.find(row => row.rowId === grant.id);
+      if (!targetRow) return;
+
+      const cellIndex = columns.findIndex(col => col.columnId === String(columnId));
+      if (cellIndex === -1) return;
+
+      const cell = targetRow.cells[cellIndex];
+      if (cell.type === "number") {
+        changes.push({
+          rowId: grant.id,
+          columnId: String(columnId),
+          newCell: {
+            ...cell,
+            value: value,
+          }
+        });
+      }
+    });
+
+    if (changes.length > 0) {
+      handleChanges(changes);
+    }
+  }, [selectedCell, rows, columns, disabledDates]);
 
   const handleChanges = useCallback(
     async (changes: any[]) => {
@@ -170,17 +260,66 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({ userId }) => {
     setError(null);
   };
 
-  return (
-    <Card sx={{ p: 2, height: "100%" }}>
-      <Typography variant="h6" gutterBottom>
-        Timesheet Grid - {format(currentDate, "MMMM yyyy")}
-      </Typography>
+  const handleFocusLocationChanged = useCallback((location: any) => {
+    const { rowId, columnId } = location;
 
-      <Box sx={{ height: "calc(100% - 80px)", overflow: "auto" }}>
+    // Skip if it's header or total row
+    if (rowId === "header" || rowId === "total") return;
+
+    // Skip if it's the grant column
+    if (columnId === "grant") return;
+
+    // Find the cell value
+    const targetRow = rows.find(row => row.rowId === rowId);
+    if (!targetRow) return;
+
+    const cellIndex = columns.findIndex(col => col.columnId === String(columnId));
+    if (cellIndex === -1) return;
+
+    const cell = targetRow.cells[cellIndex];
+    if (cell.type === "number") {
+      setSelectedCell({
+        rowId,
+        columnId: String(columnId),
+        value: cell.value || 0
+      });
+    }
+  }, [rows, columns]);
+
+  const gridContent = (
+    <>
+      {showRowColumnControls && selectedCell && (
+        <Box sx={{ mb: 2 }}>
+          <Stack direction="row" spacing={2} alignItems="center">
+            <Typography variant="body2">
+              Selected: {selectedCell.value}% (Row: {mockGrants.find(g => g.id === selectedCell.rowId)?.name}, Date: {format(new Date(selectedCell.columnId), "MMM dd")})
+            </Typography>
+            <Button
+              variant="outlined"
+              size="small"
+              onClick={applyToRow}
+              disabled={disabledDates.includes(selectedCell.columnId)}
+            >
+              Apply to Row
+            </Button>
+            <Button
+              variant="outlined"
+              size="small"
+              onClick={applyToColumn}
+              disabled={selectedCell.columnId === "grant"}
+            >
+              Apply to Column
+            </Button>
+          </Stack>
+        </Box>
+      )}
+
+      <Box sx={{ height: showCard ? "calc(100% - 80px)" : "100%", overflow: "auto" }}>
         <ReactGrid
           rows={rows}
           columns={columns}
           onCellsChanged={handleChanges}
+          onFocusLocationChanged={handleFocusLocationChanged}
           enableRangeSelection
           enableRowSelection
           enableFillHandle
@@ -201,6 +340,19 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({ userId }) => {
           {error}
         </Alert>
       </Snackbar>
+    </>
+  );
+
+  if (!showCard) {
+    return gridContent;
+  }
+
+  return (
+    <Card sx={{ p: 2, height: "100%" }}>
+      <Typography variant="h6" gutterBottom>
+        {title || `Timesheet Grid - ${format(periodStart, "MMM dd")} to ${format(periodEnd, "MMM dd, yyyy")}`}
+      </Typography>
+      {gridContent}
     </Card>
   );
 };

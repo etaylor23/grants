@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState, useCallback } from "react";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
@@ -25,9 +25,10 @@ import {
   useAddBulkWorkdays,
 } from "../../api/hooks";
 import { mockGrants } from "../../api/mockData";
-import { format, startOfMonth, endOfMonth } from "date-fns";
+import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, startOfDay, endOfDay } from "date-fns";
 import { User } from "../../models/types";
 import { generateUserColor } from "../../utils/colors";
+import { TimesheetModal } from "../TimesheetModal";
 
 interface CalendarViewProps {
   selectedUsers: User[];
@@ -40,12 +41,19 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
   onDateSelect,
   onSwitchToGrid,
 }) => {
-  const [dialogOpen, setDialogOpen] = React.useState(false);
-  const [selectedDate, setSelectedDate] = React.useState<string>("");
-  const [selectedUserId, setSelectedUserId] = React.useState<string>("");
-  const [bulkDialogOpen, setBulkDialogOpen] = React.useState(false);
-  const [bulkSelectedUserId, setBulkSelectedUserId] =
-    React.useState<string>("");
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<string>("");
+  const [selectedUserId, setSelectedUserId] = useState<string>("");
+  const [bulkDialogOpen, setBulkDialogOpen] = useState(false);
+  const [bulkSelectedUserId, setBulkSelectedUserId] = useState<string>("");
+
+  // Timesheet modal state
+  const [timesheetModalOpen, setTimesheetModalOpen] = useState(false);
+  const [timesheetUserId, setTimesheetUserId] = useState<string>("");
+  const [timesheetUserName, setTimesheetUserName] = useState<string>("");
+  const [timesheetStartDate, setTimesheetStartDate] = useState<Date>(new Date());
+  const [timesheetEndDate, setTimesheetEndDate] = useState<Date>(new Date());
+  const [calendarApi, setCalendarApi] = useState<any>(null);
 
   const currentDate = new Date();
   const year = currentDate.getFullYear();
@@ -88,6 +96,44 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
 
   const toggleWorkdayMutation = useToggleWorkday();
   const addBulkWorkdaysMutation = useAddBulkWorkdays();
+
+  // Function to get current calendar period
+  const getCurrentCalendarPeriod = useCallback(() => {
+    if (!calendarApi) {
+      // Fallback to current month
+      const now = new Date();
+      return {
+        start: startOfMonth(now),
+        end: endOfMonth(now),
+      };
+    }
+
+    const view = calendarApi.view;
+    const currentDate = view.currentStart;
+
+    switch (view.type) {
+      case "dayGridMonth":
+        return {
+          start: startOfMonth(currentDate),
+          end: endOfMonth(currentDate),
+        };
+      case "timeGridWeek":
+        return {
+          start: startOfWeek(currentDate, { weekStartsOn: 1 }), // Monday start
+          end: endOfWeek(currentDate, { weekStartsOn: 1 }),
+        };
+      case "timeGridDay":
+        return {
+          start: startOfDay(currentDate),
+          end: endOfDay(currentDate),
+        };
+      default:
+        return {
+          start: startOfMonth(currentDate),
+          end: endOfMonth(currentDate),
+        };
+    }
+  }, [calendarApi]);
 
   console.log("CalendarView render:", {
     selectedUsersCount: selectedUsers.length,
@@ -185,10 +231,20 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
   };
 
   const handleEventClick = (info: any) => {
-    // Switch to grid view when clicking on a workday event
-    // Pass the userId from the event's extended props
+    // Open timesheet modal when clicking on a workday event
     const userId = info.event.extendedProps?.userId;
-    onSwitchToGrid?.(userId);
+    const userName = info.event.extendedProps?.userName;
+
+    if (userId && userName) {
+      const period = getCurrentCalendarPeriod();
+
+      setTimesheetUserId(userId);
+      setTimesheetUserName(userName);
+      setTimesheetStartDate(period.start);
+      setTimesheetEndDate(period.end);
+      setTimesheetModalOpen(true);
+    }
+
     onDateSelect?.(info.event.startStr);
   };
 
@@ -253,6 +309,11 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
 
       <Box sx={{ height: "calc(100% - 180px)" }}>
         <FullCalendar
+          ref={(ref) => {
+            if (ref) {
+              setCalendarApi(ref.getApi());
+            }
+          }}
           plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
           initialView="dayGridMonth"
           headerToolbar={{
@@ -390,6 +451,21 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Timesheet Modal */}
+      {timesheetUserId && (
+        <TimesheetModal
+          open={timesheetModalOpen}
+          onClose={() => setTimesheetModalOpen(false)}
+          userId={timesheetUserId}
+          userName={timesheetUserName}
+          startDate={timesheetStartDate}
+          endDate={timesheetEndDate}
+          workdays={
+            userWorkdays.find(uw => uw.user.id === timesheetUserId)?.workdays?.workdays || {}
+          }
+        />
+      )}
     </Card>
   );
 };

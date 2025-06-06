@@ -74,28 +74,28 @@ const renderWithProviders = (component: React.ReactElement) => {
 
 describe('CalendarView', () => {
   it('renders calendar component', () => {
-    renderWithProviders(<CalendarView userId="user1" />);
-    
+    renderWithProviders(<CalendarView selectedUsers={[{ id: "user1", name: "Test User", email: "test@test.com" }]} />);
+
     expect(screen.getByText('Calendar View')).toBeInTheDocument();
     expect(screen.getByTestId('fullcalendar')).toBeInTheDocument();
   });
 
   it('calls onDateSelect when date is clicked', () => {
     const mockOnDateSelect = jest.fn();
-    
+
     renderWithProviders(
-      <CalendarView userId="user1" onDateSelect={mockOnDateSelect} />
+      <CalendarView selectedUsers={[{ id: "user1", name: "Test User", email: "test@test.com" }]} onDateSelect={mockOnDateSelect} />
     );
-    
+
     fireEvent.click(screen.getByTestId('mock-date-click'));
-    
+
     expect(mockOnDateSelect).toHaveBeenCalledWith('2024-01-15');
   });
 
   it('displays events for workdays with allocations', () => {
-    renderWithProviders(<CalendarView userId="user1" />);
-    
+    renderWithProviders(<CalendarView selectedUsers={[{ id: "user1", name: "Test User", email: "test@test.com" }]} />);
+
     // Should show event with 75% allocation (50% + 25%)
-    expect(screen.getByText('75% allocated')).toBeInTheDocument();
+    expect(screen.getByText('Test User: 75% allocated')).toBeInTheDocument();
   });
 });
