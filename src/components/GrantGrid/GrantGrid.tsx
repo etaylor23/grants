@@ -168,6 +168,7 @@ export const GrantGrid: React.FC<GrantGridProps> = ({
                 date: cell.date,
                 grantId: grant.id,
                 allocationPercent: newValue,
+                totalHours: 8.0, // Default to 8 hours
               };
 
               if (existingSlot) {

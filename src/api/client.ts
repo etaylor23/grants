@@ -1,4 +1,11 @@
-import { Workday, TimeSlot, TimeSlotBatch, ApiError } from "../models/types";
+import {
+  Workday,
+  TimeSlot,
+  TimeSlotBatch,
+  ApiError,
+  Personnel,
+  Grant,
+} from "../models/types";
 import { mockWorkdays, mockTimeSlots } from "./mockData";
 
 // Simulate API delay
@@ -52,11 +59,28 @@ export class ApiClient {
     const start = new Date(startDate);
     const end = new Date(endDate);
 
-    return mockTimeSlots.filter((slot) => {
+    console.log(`getGrantTimeSlots called with:`, {
+      grantId,
+      startDate,
+      endDate,
+    });
+    console.log(`Total mockTimeSlots available:`, mockTimeSlots.length);
+
+    const grantSlots = mockTimeSlots.filter((slot) => slot.grantId === grantId);
+    console.log(`Slots for grant ${grantId}:`, grantSlots.length);
+
+    const result = mockTimeSlots.filter((slot) => {
       if (slot.grantId !== grantId) return false;
       const slotDate = new Date(slot.date);
       return slotDate >= start && slotDate <= end;
     });
+
+    console.log(
+      `Filtered result for date range:`,
+      result.length,
+      result.slice(0, 3)
+    );
+    return result;
   }
 
   static async batchUpdateTimeSlots(batch: TimeSlotBatch): Promise<void> {
@@ -78,11 +102,10 @@ export class ApiClient {
         const newTotal = (dayTotals[key] || 0) + slot.allocationPercent;
 
         if (newTotal > 100) {
-          const error: ApiError = {
-            message: `Total allocation for ${slot.date} would exceed 100%`,
-            code: "ALLOCATION_EXCEEDED",
-          };
-          throw error;
+          throw new ApiError(
+            `Total allocation for ${slot.date} would exceed 100%`,
+            "ALLOCATION_EXCEEDED"
+          );
         }
 
         mockTimeSlots.push(slot);
@@ -106,11 +129,10 @@ export class ApiClient {
             (dayTotals[key] || 0) - oldPercent + updatedSlot.allocationPercent;
 
           if (newTotal > 100) {
-            const error: ApiError = {
-              message: `Total allocation for ${updatedSlot.date} would exceed 100%`,
-              code: "ALLOCATION_EXCEEDED",
-            };
-            throw error;
+            throw new ApiError(
+              `Total allocation for ${updatedSlot.date} would exceed 100%`,
+              "ALLOCATION_EXCEEDED"
+            );
           }
 
           mockTimeSlots[index] = updatedSlot;
@@ -231,5 +253,40 @@ export class ApiClient {
     }
 
     console.log(`Added ${addedCount} workdays for user ${userId}`);
+  }
+
+  // Personnel management methods (mock implementations)
+  static async getAllPersonnel(): Promise<Personnel[]> {
+    await delay(200);
+    // Return empty array for mock implementation
+    return [];
+  }
+
+  static async createPersonnel(
+    personnel: Omit<Personnel, "id">
+  ): Promise<Personnel> {
+    await delay(300);
+    // Mock implementation - just return with generated ID
+    return {
+      id: `PERSON-${Date.now()}`,
+      ...personnel,
+    };
+  }
+
+  // Grant management methods (mock implementations)
+  static async getAllGrants(): Promise<Grant[]> {
+    await delay(200);
+    // Return mock grants from mockData
+    const { mockGrants } = await import("./mockData");
+    return mockGrants;
+  }
+
+  static async createGrant(grant: Omit<Grant, "id">): Promise<Grant> {
+    await delay(300);
+    // Mock implementation - just return with generated ID
+    return {
+      id: `GRANT-${Date.now()}`,
+      ...grant,
+    };
   }
 }

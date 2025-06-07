@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
   AppBar,
@@ -24,9 +24,11 @@ import {
   CalendarToday as CalendarIcon,
   GridOn as GridIcon,
   Person as PersonIcon,
+  Business as BusinessIcon,
+  Assignment as AssignmentIcon,
 } from "@mui/icons-material";
-import { mockUsers } from "../../api/mockData";
-import { User, ViewMode } from "../../models/types";
+import { usePersonnel } from "../../api/hooks";
+import { User, ViewMode, Personnel } from "../../models/types";
 import { generateUserColor } from "../../utils/colors";
 
 interface AppLayoutProps {
@@ -48,6 +50,18 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
   const navigate = useNavigate();
   const location = useLocation();
 
+  // Get personnel from API and convert to User format
+  const { data: personnel = [] } = usePersonnel();
+  const availableUsers = useMemo(() => {
+    return personnel.map(
+      (person: Personnel): User => ({
+        id: person.id,
+        name: `${person.firstName} ${person.lastName}`,
+        email: `${person.firstName.toLowerCase()}.${person.lastName.toLowerCase()}@company.com`, // Generate placeholder email
+      })
+    );
+  }, [personnel]);
+
   const toggleDrawer = () => {
     setDrawerOpen(!drawerOpen);
   };
@@ -67,6 +81,11 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
       navigate("/grants");
     }
     onViewModeChange(mode);
+    setDrawerOpen(false);
+  };
+
+  const handleNavigate = (path: string) => {
+    navigate(path);
     setDrawerOpen(false);
   };
 
@@ -114,12 +133,12 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
                   }}
                 />
               ))}
-              {selectedUsers.length < mockUsers.length && (
+              {selectedUsers.length < availableUsers.length && (
                 <FormControl size="small" sx={{ minWidth: 100 }}>
                   <Select
                     value=""
                     onChange={(e) => {
-                      const user = mockUsers.find(
+                      const user = availableUsers.find(
                         (u) => u.id === e.target.value
                       );
                       if (
@@ -143,7 +162,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
                     <MenuItem value="" disabled>
                       Add User
                     </MenuItem>
-                    {mockUsers
+                    {availableUsers
                       .filter(
                         (user) => !selectedUsers.find((u) => u.id === user.id)
                       )
@@ -198,6 +217,34 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
                   <GridIcon />
                 </ListItemIcon>
                 <ListItemText primary="Grant View" />
+              </ListItemButton>
+            </ListItem>
+          </List>
+
+          <Divider />
+
+          <List>
+            <ListItem disablePadding>
+              <ListItemButton
+                selected={location.pathname === "/personnel"}
+                onClick={() => handleNavigate("/personnel")}
+              >
+                <ListItemIcon>
+                  <PersonIcon />
+                </ListItemIcon>
+                <ListItemText primary="Personnel Management" />
+              </ListItemButton>
+            </ListItem>
+
+            <ListItem disablePadding>
+              <ListItemButton
+                selected={location.pathname === "/grant-management"}
+                onClick={() => handleNavigate("/grant-management")}
+              >
+                <ListItemIcon>
+                  <BusinessIcon />
+                </ListItemIcon>
+                <ListItemText primary="Grant Management" />
               </ListItemButton>
             </ListItem>
           </List>

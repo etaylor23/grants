@@ -33,22 +33,21 @@ export const mockGrants: Grant[] = [
   },
 ];
 
-// Generate mock workdays for current year - start with empty workdays
-const generateMockWorkdays = (
-  userId: string,
-  year: number
-): Record<string, boolean> => {
-  const workdays: Record<string, boolean> = {};
-  // Start with no workdays - users will add them by clicking dates
-  return workdays;
-};
+// Helper functions for generating mock data (currently unused but kept for future use)
+// const generateMockWorkdays = (
+//   userId: string,
+//   year: number
+// ): Record<string, boolean> => {
+//   const workdays: Record<string, boolean> = {};
+//   // Start with no workdays - users will add them by clicking dates
+//   return workdays;
+// };
 
-// Generate mock time slots - start with empty slots
-const generateMockTimeSlots = (userId: string): TimeSlot[] => {
-  const slots: TimeSlot[] = [];
-  // Start with no time slots - users will add workdays and allocations
-  return slots;
-};
+// const generateMockTimeSlots = (userId: string): TimeSlot[] => {
+//   const slots: TimeSlot[] = [];
+//   // Start with no time slots - users will add workdays and allocations
+//   return slots;
+// };
 
 export const mockWorkdays: Record<string, Workday> = {};
 export const mockTimeSlots: TimeSlot[] = [];
@@ -58,25 +57,60 @@ const currentDate = new Date();
 const currentMonth = currentDate.getMonth();
 const currentYear = currentDate.getFullYear();
 
-// Add some sample workdays for the current month
+// Generate sample workdays for a specific month (weekdays only)
+const generateMonthWorkdays = (year: number, month: number) => {
+  const workdays: string[] = [];
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+  for (let day = 1; day <= daysInMonth; day++) {
+    const date = new Date(year, month, day);
+    const dayOfWeek = date.getDay();
+
+    // Only include weekdays (Monday-Friday)
+    if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+      const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(
+        day
+      ).padStart(2, "0")}`;
+      workdays.push(dateStr);
+    }
+  }
+
+  return workdays;
+};
+
+// Generate workdays for multiple months to provide comprehensive test data
 const sampleWorkdays = [
-  `${currentYear}-${String(currentMonth + 1).padStart(2, "0")}-15`,
-  `${currentYear}-${String(currentMonth + 1).padStart(2, "0")}-16`,
-  `${currentYear}-${String(currentMonth + 1).padStart(2, "0")}-17`,
+  ...generateMonthWorkdays(currentYear, currentMonth), // Current month (December 2024)
+  ...generateMonthWorkdays(2025, 5), // June 2025 (month index 5)
+  ...generateMonthWorkdays(2025, 0), // January 2025 (month index 0)
+  ...generateMonthWorkdays(2025, 1), // February 2025 (month index 1)
 ];
 
-// Initialize workdays for all users
+// Initialize workdays for all users across multiple years
 mockUsers.forEach((user) => {
-  const key = `${user.id}-${currentYear}`;
-  mockWorkdays[key] = {
+  // Initialize for 2024
+  const key2024 = `${user.id}-${currentYear}`;
+  mockWorkdays[key2024] = {
     userId: user.id,
     year: currentYear,
     workdays: {},
   };
 
-  // Add sample workdays
+  // Initialize for 2025
+  const key2025 = `${user.id}-2025`;
+  mockWorkdays[key2025] = {
+    userId: user.id,
+    year: 2025,
+    workdays: {},
+  };
+
+  // Add sample workdays to appropriate years
   sampleWorkdays.forEach((date) => {
-    mockWorkdays[key].workdays[date] = true;
+    const year = parseInt(date.split("-")[0]);
+    const key = `${user.id}-${year}`;
+    if (mockWorkdays[key]) {
+      mockWorkdays[key].workdays[date] = true;
+    }
   });
 });
 
@@ -84,23 +118,78 @@ mockUsers.forEach((user) => {
 sampleWorkdays.forEach((date) => {
   // Alice Johnson allocations
   mockTimeSlots.push(
-    { userId: "user1", date, grantId: "grant1", allocationPercent: 40 },
-    { userId: "user1", date, grantId: "grant2", allocationPercent: 30 },
-    { userId: "user1", date, grantId: "grant3", allocationPercent: 30 }
+    {
+      userId: "user1",
+      date,
+      grantId: "grant1",
+      allocationPercent: 40,
+      totalHours: 8.0,
+    },
+    {
+      userId: "user1",
+      date,
+      grantId: "grant2",
+      allocationPercent: 30,
+      totalHours: 8.0,
+    },
+    {
+      userId: "user1",
+      date,
+      grantId: "grant3",
+      allocationPercent: 30,
+      totalHours: 8.0,
+    }
   );
 
   // Bob Smith allocations
   mockTimeSlots.push(
-    { userId: "user2", date, grantId: "grant1", allocationPercent: 60 },
-    { userId: "user2", date, grantId: "grant2", allocationPercent: 40 }
+    {
+      userId: "user2",
+      date,
+      grantId: "grant1",
+      allocationPercent: 60,
+      totalHours: 7.5,
+    },
+    {
+      userId: "user2",
+      date,
+      grantId: "grant2",
+      allocationPercent: 40,
+      totalHours: 7.5,
+    }
   );
 
   // Carol Davis allocations
   mockTimeSlots.push(
-    { userId: "user3", date, grantId: "grant2", allocationPercent: 50 },
-    { userId: "user3", date, grantId: "grant3", allocationPercent: 25 },
-    { userId: "user3", date, grantId: "grant4", allocationPercent: 25 }
+    {
+      userId: "user3",
+      date,
+      grantId: "grant2",
+      allocationPercent: 50,
+      totalHours: 8.5,
+    },
+    {
+      userId: "user3",
+      date,
+      grantId: "grant3",
+      allocationPercent: 25,
+      totalHours: 8.5,
+    },
+    {
+      userId: "user3",
+      date,
+      grantId: "grant4",
+      allocationPercent: 25,
+      totalHours: 8.5,
+    }
   );
 });
 
 console.log("Initialized mock data with sample workdays and time slots");
+console.log(
+  `Generated ${sampleWorkdays.length} workdays:`,
+  sampleWorkdays.slice(0, 5),
+  "..."
+);
+console.log(`Generated ${mockTimeSlots.length} time slots`);
+console.log("Sample time slots:", mockTimeSlots.slice(0, 3));

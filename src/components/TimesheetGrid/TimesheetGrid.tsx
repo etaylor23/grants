@@ -247,6 +247,7 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({
               date: cell.date,
               grantId: cell.grantId,
               allocationPercent: newValue,
+              totalHours: 8.0, // Default to 8 hours
             };
 
             if (existingSlot) {

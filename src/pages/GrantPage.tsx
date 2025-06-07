@@ -3,13 +3,15 @@ import { useParams, useNavigate } from "react-router-dom";
 import { AppLayout } from "../components/Layout/AppLayout";
 import { GrantGrid } from "../components/GrantGrid/GrantGrid";
 import { GrantSelector } from "../components/GrantSelector/GrantSelector";
-import { mockUsers, mockGrants } from "../api/mockData";
+import { GrantTimesheet } from "../components/GrantView/GrantTimesheet";
+import { mockUsers } from "../api/mockData";
+import { useGrants } from "../api/hooks";
 import { User, Grant } from "../models/types";
-import { Box, Typography } from "@mui/material";
+import { Box, Typography, Tabs, Tab, Paper } from "@mui/material";
 
 // Helper function to find grant by slug
-const findGrantBySlug = (slug: string): Grant | undefined => {
-  return mockGrants.find(
+const findGrantBySlug = (slug: string, grants: Grant[]): Grant | undefined => {
+  return grants.find(
     (grant) => grant.name.toLowerCase().replace(/\s+/g, "-") === slug
   );
 };
@@ -40,15 +42,17 @@ const loadSelectedUsersForGrant = (): User[] => {
 export const GrantPage: React.FC = () => {
   const { grantSlug } = useParams<{ grantSlug: string }>();
   const navigate = useNavigate();
+  const { data: grants = [] } = useGrants();
 
   // Find the grant based on the slug
-  const currentGrant = grantSlug ? findGrantBySlug(grantSlug) : null;
+  const currentGrant = grantSlug ? findGrantBySlug(grantSlug, grants) : null;
   const [selectedGrant, setSelectedGrant] = useState<Grant | null>(
     currentGrant || null
   );
   const [selectedUsers, setSelectedUsers] = useState<User[]>(() =>
     loadSelectedUsersForGrant()
   );
+  const [tabValue, setTabValue] = useState(0);
 
   const handleGrantChange = (grant: Grant | null) => {
     setSelectedGrant(grant);
@@ -103,7 +107,30 @@ export const GrantPage: React.FC = () => {
         />
 
         {selectedGrant ? (
-          <GrantGrid grant={selectedGrant} />
+          <Box sx={{ mt: 3 }}>
+            {/* Tabs for different views */}
+            <Paper sx={{ mb: 3 }}>
+              <Tabs
+                value={tabValue}
+                onChange={(_, newValue) => setTabValue(newValue)}
+                sx={{ borderBottom: 1, borderColor: "divider" }}
+              >
+                <Tab label="User Allocations" />
+                <Tab label="Hours Timesheet" />
+              </Tabs>
+            </Paper>
+
+            {/* Tab Content */}
+            {tabValue === 0 && <GrantGrid grant={selectedGrant} />}
+
+            {tabValue === 1 && (
+              <GrantTimesheet
+                grantId={selectedGrant.id}
+                grantName={selectedGrant.name}
+                grantColor={selectedGrant.color}
+              />
+            )}
+          </Box>
         ) : (
           <Box
             sx={{
