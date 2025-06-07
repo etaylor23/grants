@@ -94,7 +94,6 @@ export const CalendarPage: React.FC = () => {
       <CalendarView
         selectedUsers={selectedUsers}
         onDateSelect={handleDateSelect}
-        onSwitchToGrid={handleSwitchToTimesheet}
       />
     </AppLayout>
   );

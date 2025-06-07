@@ -8,15 +8,7 @@ import {
   NumberCell,
 } from "@silevis/reactgrid";
 import "./TimesheetGrid.scss";
-import {
-  Box,
-  Card,
-  Typography,
-  Alert,
-  Snackbar,
-  Button,
-  Stack,
-} from "@mui/material";
+import { Box, Typography, Alert, Snackbar, Button, Stack } from "@mui/material";
 import { useTimeSlots, useBatchUpdateTimeSlots } from "../../api/hooks";
 import { mockGrants } from "../../api/mockData";
 import { TimeSlot, TimeSlotBatch, ApiError } from "../../models/types";
@@ -378,15 +370,25 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({
   }
 
   return (
-    <Card sx={{ p: 2, height: "100%" }}>
-      <Typography variant="h6" gutterBottom>
+    <Box sx={{ height: "100%" }}>
+      <Typography variant="h5" gutterBottom sx={{ fontWeight: 600, mb: 3 }}>
         {title ||
           `Timesheet Grid - ${format(periodStart, "MMM dd")} to ${format(
             periodEnd,
             "MMM dd, yyyy"
           )}`}
       </Typography>
-      {gridContent}
-    </Card>
+      <Box
+        sx={{
+          backgroundColor: "#ffffff",
+          borderRadius: 2,
+          border: "1px solid #e0e0e0",
+          overflow: "hidden",
+          height: "calc(100% - 80px)",
+        }}
+      >
+        {gridContent}
+      </Box>
+    </Box>
   );
 };

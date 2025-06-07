@@ -5,7 +5,7 @@ $cell-editor-border-color: #1976d2;
 // Import ReactGrid styles with our custom variables
 @import "@silevis/reactgrid/styles.scss";
 
-.disabled-cell {
+.rg-cell.disabled-cell {
   background-color: #f0f0f0 !important;
 }
 

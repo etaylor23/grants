@@ -3,9 +3,9 @@ import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
+import "./CalendarView.scss";
 import {
   Box,
-  Card,
   Typography,
   Alert,
   Dialog,
@@ -25,7 +25,15 @@ import {
   useAddBulkWorkdays,
 } from "../../api/hooks";
 import { mockGrants } from "../../api/mockData";
-import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, startOfDay, endOfDay } from "date-fns";
+import {
+  format,
+  startOfMonth,
+  endOfMonth,
+  startOfWeek,
+  endOfWeek,
+  startOfDay,
+  endOfDay,
+} from "date-fns";
 import { User } from "../../models/types";
 import { generateUserColor } from "../../utils/colors";
 import { TimesheetModal } from "../TimesheetModal";
@@ -33,13 +41,11 @@ import { TimesheetModal } from "../TimesheetModal";
 interface CalendarViewProps {
   selectedUsers: User[];
   onDateSelect?: (date: string) => void;
-  onSwitchToGrid?: (userId?: string) => void;
 }
 
 export const CalendarView: React.FC<CalendarViewProps> = ({
   selectedUsers,
   onDateSelect,
-  onSwitchToGrid,
 }) => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string>("");
@@ -51,7 +57,9 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
   const [timesheetModalOpen, setTimesheetModalOpen] = useState(false);
   const [timesheetUserId, setTimesheetUserId] = useState<string>("");
   const [timesheetUserName, setTimesheetUserName] = useState<string>("");
-  const [timesheetStartDate, setTimesheetStartDate] = useState<Date>(new Date());
+  const [timesheetStartDate, setTimesheetStartDate] = useState<Date>(
+    new Date()
+  );
   const [timesheetEndDate, setTimesheetEndDate] = useState<Date>(new Date());
   const [calendarApi, setCalendarApi] = useState<any>(null);
 
@@ -282,12 +290,12 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
   };
 
   return (
-    <Card sx={{ p: 2, height: "100%" }}>
-      <Typography variant="h6" gutterBottom>
+    <Box sx={{ height: "100%" }}>
+      <Typography variant="h4" gutterBottom sx={{ fontWeight: 600, mb: 3 }}>
         Calendar View
       </Typography>
 
-      <Alert severity="info" sx={{ mb: 2 }}>
+      <Alert severity="info" sx={{ mb: 3, borderRadius: 2 }}>
         Click on any date to add/remove a workday. Click on workday events to
         edit allocations in the grid view.
         <br />
@@ -295,11 +303,12 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
         100%, Red = Over 100%
       </Alert>
 
-      <Box sx={{ mb: 2, display: "flex", justifyContent: "center" }}>
+      <Box sx={{ mb: 3, display: "flex", justifyContent: "center" }}>
         <Button
           variant="contained"
           onClick={handleBulkWorkdaysClick}
           disabled={addBulkWorkdaysMutation.isPending}
+          sx={{ borderRadius: 2 }}
         >
           {addBulkWorkdaysMutation.isPending
             ? "Adding..."
@@ -307,7 +316,118 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
         </Button>
       </Box>
 
-      <Box sx={{ height: "calc(100% - 180px)" }}>
+      <Box
+        sx={{
+          height: "calc(100% - 200px)",
+          backgroundColor: "#ffffff",
+          borderRadius: 2,
+          border: "1px solid #e0e0e0",
+          overflow: "hidden",
+          "& .fc": {
+            fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
+          },
+          "& .fc-toolbar": {
+            padding: "16px 20px",
+            backgroundColor: "#f8f9fa",
+            borderBottom: "1px solid #e0e0e0",
+          },
+          "& .fc-toolbar-title": {
+            fontSize: "1.5rem",
+            fontWeight: 600,
+            color: "#1976d2",
+          },
+          "& .fc-button": {
+            backgroundColor: "#ffffff",
+            border: "1px solid #d0d7de",
+            borderRadius: "8px",
+            color: "#24292f",
+            fontSize: "0.875rem",
+            fontWeight: 500,
+            padding: "8px 16px",
+            margin: "0 4px",
+            transition: "all 0.2s ease-in-out",
+            textTransform: "none",
+            "&:hover": {
+              backgroundColor: "#f6f8fa",
+              borderColor: "#1976d2",
+              color: "#1976d2",
+            },
+            "&:focus": {
+              boxShadow: "0 0 0 3px rgba(25, 118, 210, 0.1)",
+              outline: "none",
+            },
+            "&.fc-button-active": {
+              backgroundColor: "#1976d2",
+              borderColor: "#1976d2",
+              color: "#ffffff",
+              "&:hover": {
+                backgroundColor: "#1565c0",
+                borderColor: "#1565c0",
+                color: "#ffffff",
+              },
+            },
+            "&:disabled": {
+              backgroundColor: "#f6f8fa",
+              borderColor: "#d0d7de",
+              color: "#8c959f",
+              cursor: "not-allowed",
+            },
+          },
+          "& .fc-daygrid-day": {
+            "&:hover": {
+              backgroundColor: "#f8f9fa",
+            },
+          },
+          "& .fc-daygrid-day-number": {
+            color: "#24292f",
+            fontWeight: 500,
+            padding: "8px",
+          },
+          "& .fc-col-header-cell": {
+            backgroundColor: "#f6f8fa",
+            borderColor: "#d0d7de",
+            fontWeight: 600,
+            color: "#656d76",
+            textTransform: "uppercase",
+            fontSize: "0.75rem",
+            letterSpacing: "0.5px",
+            padding: "12px 8px",
+          },
+          "& .fc-daygrid-day-frame": {
+            minHeight: "100px",
+          },
+          "& .fc-event": {
+            borderRadius: "6px",
+            border: "none",
+            fontSize: "0.75rem",
+            fontWeight: 500,
+            margin: "2px",
+            padding: "2px 6px",
+          },
+          "& .fc-more-link": {
+            color: "#1976d2",
+            fontWeight: 500,
+            fontSize: "0.75rem",
+            "&:hover": {
+              color: "#1565c0",
+            },
+          },
+          "& .fc-day-today": {
+            backgroundColor: "#e3f2fd !important",
+            "& .fc-daygrid-day-number": {
+              backgroundColor: "#1976d2",
+              color: "#ffffff",
+              borderRadius: "50%",
+              width: "28px",
+              height: "28px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              margin: "4px",
+            },
+          },
+        }}
+      >
         <FullCalendar
           ref={(ref) => {
             if (ref) {
@@ -320,6 +440,12 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
             left: "prev,next today",
             center: "title",
             right: "dayGridMonth,timeGridWeek,timeGridDay",
+          }}
+          buttonText={{
+            today: "Today",
+            month: "Month",
+            week: "Week",
+            day: "Day",
           }}
           events={events}
           dateClick={handleDateClick}
@@ -462,10 +588,11 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
           startDate={timesheetStartDate}
           endDate={timesheetEndDate}
           workdays={
-            userWorkdays.find(uw => uw.user.id === timesheetUserId)?.workdays?.workdays || {}
+            userWorkdays.find((uw) => uw.user.id === timesheetUserId)?.workdays
+              ?.workdays || {}
           }
         />
       )}
-    </Card>
+    </Box>
   );
 };

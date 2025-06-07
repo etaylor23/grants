@@ -15,10 +15,6 @@ export const Dashboard: React.FC = () => {
     console.log("Date selected:", date);
   };
 
-  const handleSwitchToGrid = () => {
-    setViewMode("grid");
-  };
-
   const renderContent = () => {
     switch (viewMode) {
       case "calendar":
@@ -26,7 +22,6 @@ export const Dashboard: React.FC = () => {
           <CalendarView
             selectedUsers={selectedUsers}
             onDateSelect={handleDateSelect}
-            onSwitchToGrid={handleSwitchToGrid}
           />
         );
       case "grid":

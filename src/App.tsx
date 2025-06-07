@@ -12,6 +12,7 @@ import { theme } from "./theme";
 import { Dashboard } from "./pages/Dashboard";
 import { CalendarPage } from "./pages/CalendarPage";
 import { TimesheetPage } from "./pages/TimesheetPage";
+import { GrantPage } from "./pages/GrantPage";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -32,6 +33,8 @@ function App() {
             <Route path="/" element={<Navigate to="/calendar" replace />} />
             <Route path="/calendar" element={<CalendarPage />} />
             <Route path="/timesheet/:userSlug" element={<TimesheetPage />} />
+            <Route path="/grants" element={<GrantPage />} />
+            <Route path="/grants/:grantSlug" element={<GrantPage />} />
             <Route path="/dashboard" element={<Dashboard />} />
           </Routes>
         </Router>

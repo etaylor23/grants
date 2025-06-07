@@ -1,0 +1,129 @@
+/* Modern FullCalendar Styling */
+
+/* Additional button styling for better visual hierarchy */
+.fc-button-group {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.fc-button-group .fc-button {
+  border-radius: 0 !important;
+  margin: 0 !important;
+  border-right: none !important;
+}
+
+.fc-button-group .fc-button:first-child {
+  border-top-left-radius: 8px !important;
+  border-bottom-left-radius: 8px !important;
+}
+
+.fc-button-group .fc-button:last-child {
+  border-top-right-radius: 8px !important;
+  border-bottom-right-radius: 8px !important;
+  border-right: 1px solid #d0d7de !important;
+}
+
+/* Improve spacing between button groups */
+.fc-toolbar-chunk {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Better event styling */
+.fc-event-title {
+  font-weight: 600;
+  font-size: 0.75rem;
+}
+
+/* Improve day cell borders */
+.fc-daygrid-day {
+  border-color: #e1e4e8;
+}
+
+.fc-scrollgrid {
+  border-color: #e1e4e8;
+}
+
+/* Better weekend styling */
+.fc-day-sat,
+.fc-day-sun {
+  background-color: #fafbfc;
+}
+
+/* Improve popover styling */
+.fc-popover {
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  border: 1px solid #e1e4e8;
+}
+
+.fc-popover-header {
+  background-color: #f6f8fa;
+  border-bottom: 1px solid #e1e4e8;
+  padding: 12px 16px;
+  font-weight: 600;
+}
+
+.fc-popover-body {
+  padding: 8px;
+}
+
+/* Improve time grid styling for week/day views */
+.fc-timegrid-slot {
+  border-color: #e1e4e8;
+}
+
+.fc-timegrid-axis {
+  border-color: #e1e4e8;
+}
+
+/* Better scrollbar styling */
+.fc-scroller::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.fc-scroller::-webkit-scrollbar-track {
+  background: #f1f3f4;
+  border-radius: 4px;
+}
+
+.fc-scroller::-webkit-scrollbar-thumb {
+  background: #c1c8cd;
+  border-radius: 4px;
+}
+
+.fc-scroller::-webkit-scrollbar-thumb:hover {
+  background: #a8b1b8;
+}
+
+/* Improve loading state */
+.fc-loading {
+  opacity: 0.6;
+  transition: opacity 0.2s ease-in-out;
+}
+
+/* Better responsive behavior */
+@media (max-width: 768px) {
+  .fc-toolbar {
+    flex-direction: column;
+    gap: 12px;
+    padding: 12px 16px;
+  }
+  
+  .fc-toolbar-chunk {
+    justify-content: center;
+  }
+  
+  .fc-button {
+    font-size: 0.8rem !important;
+    padding: 6px 12px !important;
+  }
+  
+  .fc-toolbar-title {
+    font-size: 1.25rem !important;
+    text-align: center;
+  }
+}

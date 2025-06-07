@@ -37,7 +37,7 @@ export interface DayAllocation {
   isWorkday: boolean;
 }
 
-export type ViewMode = 'calendar' | 'grid';
+export type ViewMode = "calendar" | "grid" | "grant";
 
 export interface ApiError {
   message: string;
