@@ -1,0 +1,15 @@
+$cell-font-size: 1em !default;
+$cell-border-color: #1976d2;
+$cell-editor-border-color: #1976d2;
+
+// Import ReactGrid styles with our custom variables
+@import "@silevis/reactgrid/styles.scss";
+
+.disabled-cell {
+  background-color: #f0f0f0 !important;
+}
+
+.rg-cell {
+  border: 1px solid rgba(193, 225, 193, 1) !important;
+  background-color: rgba(193, 225, 193, 0.3) !important;
+}
