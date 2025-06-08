@@ -50,7 +50,7 @@ export interface WorkdayHoursBatch {
   delete?: { userId: string; date: string }[];
 }
 
-export type ViewMode = 'calendar' | 'grid';
+export type ViewMode = "calendar" | "grid";
 
 export interface ApiError {
   message: string;

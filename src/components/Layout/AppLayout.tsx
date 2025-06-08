@@ -63,6 +63,8 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
           .replace(/\s+/g, "-");
         navigate(`/timesheet/${userSlug}`);
       }
+    } else if (mode === "grant") {
+      navigate("/grants");
     }
     onViewModeChange(mode);
     setDrawerOpen(false);
@@ -186,15 +188,16 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
                 <ListItemText primary="Calendar View" />
               </ListItemButton>
             </ListItem>
+
             <ListItem disablePadding>
               <ListItemButton
-                selected={location.pathname.startsWith("/timesheet")}
-                onClick={() => handleViewModeChange("grid")}
+                selected={location.pathname.startsWith("/grants")}
+                onClick={() => handleViewModeChange("grant")}
               >
                 <ListItemIcon>
                   <GridIcon />
                 </ListItemIcon>
-                <ListItemText primary="Timesheet Grid" />
+                <ListItemText primary="Grant View" />
               </ListItemButton>
             </ListItem>
           </List>
@@ -238,6 +241,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
           p: 3,
           mt: 8, // Account for AppBar height
           height: "calc(100vh - 64px)",
+          backgroundColor: "#ffffff",
         }}
       >
         {children}

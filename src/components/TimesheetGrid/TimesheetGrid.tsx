@@ -8,12 +8,37 @@ import {
   NumberCell,
 } from "@silevis/reactgrid";
 import "@silevis/reactgrid/styles.css";
-import { Box, Card, Typography, Alert, Snackbar, Button, Stack } from "@mui/material";
-import { useTimeSlots, useBatchUpdateTimeSlots, useWorkdayHours, useBatchUpdateWorkdayHours } from "../../api/hooks";
+import {
+  Box,
+  Card,
+  Typography,
+  Alert,
+  Snackbar,
+  Button,
+  Stack,
+} from "@mui/material";
+import {
+  useTimeSlots,
+  useBatchUpdateTimeSlots,
+  useWorkdayHours,
+  useBatchUpdateWorkdayHours,
+} from "../../api/hooks";
 import { mockGrants } from "../../api/mockData";
-import { TimeSlot, TimeSlotBatch, WorkdayHours, WorkdayHoursBatch, ApiError } from "../../models/types";
+import {
+  TimeSlot,
+  TimeSlotBatch,
+  WorkdayHours,
+  WorkdayHoursBatch,
+  ApiError,
+} from "../../models/types";
 import { format, eachDayOfInterval, startOfMonth, endOfMonth } from "date-fns";
-import { formatDateOrdinal, calculateTotalAvailableHours, calculateTotalHoursWorked, calculateAveragePercentage, DEFAULT_WORKDAY_HOURS } from "../../utils/dateUtils";
+import {
+  formatDateOrdinal,
+  calculateTotalAvailableHours,
+  calculateTotalHoursWorked,
+  calculateAveragePercentage,
+  DEFAULT_WORKDAY_HOURS,
+} from "../../utils/dateUtils";
 
 interface TimesheetGridProps {
   userId: string;
@@ -32,10 +57,14 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({
   disabledDates = [],
   showCard = true,
   showRowColumnControls = false,
-  title
+  title,
 }) => {
   const [error, setError] = useState<string | null>(null);
-  const [selectedCell, setSelectedCell] = useState<{ rowId: string; columnId: string; value: number } | null>(null);
+  const [selectedCell, setSelectedCell] = useState<{
+    rowId: string;
+    columnId: string;
+    value: number;
+  } | null>(null);
 
   const currentDate = new Date();
   const periodStart = startDate || startOfMonth(currentDate);
@@ -108,21 +137,40 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({
               text: formatDateOrdinal(day),
             } as HeaderCell)
         ),
-        { type: "header", text: "Total Hours Worked on Grants in Time Period" } as HeaderCell,
-        { type: "header", text: "Average Percentage in Time Period" } as HeaderCell,
+        {
+          type: "header",
+          text: "Total Hours Worked on Grants in Time Period",
+        } as HeaderCell,
+        {
+          type: "header",
+          text: "Average Percentage in Time Period",
+        } as HeaderCell,
       ],
     };
 
     const grantRows: Row[] = mockGrants.map((grant) => {
       // Calculate total hours worked for this grant
-      const periodDates = periodDays.map(day => format(day, "yyyy-MM-dd"));
-      const totalHoursWorked = calculateTotalHoursWorked(timeSlots, grant.id, periodDates);
-      const totalAvailableHours = calculateTotalAvailableHours(workdayHoursLookup, periodDates);
-      const averagePercentage = calculateAveragePercentage(totalHoursWorked, totalAvailableHours);
+      const periodDates = periodDays.map((day) => format(day, "yyyy-MM-dd"));
+      const totalHoursWorked = calculateTotalHoursWorked(
+        timeSlots,
+        grant.id,
+        periodDates
+      );
+      const totalAvailableHours = calculateTotalAvailableHours(
+        workdayHoursLookup,
+        periodDates
+      );
+      const averagePercentage = calculateAveragePercentage(
+        totalHoursWorked,
+        totalAvailableHours
+      );
 
       const cells: (TextCell | NumberCell)[] = [
         { type: "text", text: grant.name } as TextCell,
-        { type: "text", text: `${totalAvailableHours.toFixed(1)}h` } as TextCell,
+        {
+          type: "text",
+          text: `${totalAvailableHours.toFixed(1)}h`,
+        } as TextCell,
       ];
 
       periodDays.forEach((day) => {
@@ -164,7 +212,8 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({
         ...periodDays.map((day) => {
           const dateStr = format(day, "yyyy-MM-dd");
           const isDisabled = disabledDates.includes(dateStr);
-          const availableHours = workdayHoursLookup[dateStr] || DEFAULT_WORKDAY_HOURS;
+          const availableHours =
+            workdayHoursLookup[dateStr] || DEFAULT_WORKDAY_HOURS;
 
           return {
             type: "number",
@@ -197,7 +246,9 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({
           return {
             type: "text",
             text: `${totalHours.toFixed(1)}h`,
-            style: isOverAllocated ? { backgroundColor: "#ffebee", color: "#c62828" } : undefined,
+            style: isOverAllocated
+              ? { backgroundColor: "#ffebee", color: "#c62828" }
+              : undefined,
           } as TextCell & { style?: any };
         }),
         { type: "text", text: "" } as TextCell, // Empty cells for calculated columns
@@ -216,7 +267,7 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({
     const changes: any[] = [];
 
     // Find all cells in the row (excluding the grant name column)
-    const targetRow = rows.find(row => row.rowId === rowId);
+    const targetRow = rows.find((row) => row.rowId === rowId);
     if (!targetRow) return;
 
     targetRow.cells.forEach((cell, index) => {
@@ -226,9 +277,12 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({
       const dateStr = String(columnId);
 
       // Skip disabled dates and calculated columns
-      if (disabledDates.includes(dateStr) ||
-          columnId === "totalHoursWorked" ||
-          columnId === "averagePercentage") return;
+      if (
+        disabledDates.includes(dateStr) ||
+        columnId === "totalHoursWorked" ||
+        columnId === "averagePercentage"
+      )
+        return;
 
       if (cell.type === "number") {
         changes.push({
@@ -237,7 +291,7 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({
           newCell: {
             ...cell,
             value: value,
-          }
+          },
         });
       }
     });
@@ -254,18 +308,23 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({
     const changes: any[] = [];
 
     // Skip if it's a non-date column or a disabled date
-    if (columnId === "grant" ||
-        columnId === "totalHoursAvailable" ||
-        columnId === "totalHoursWorked" ||
-        columnId === "averagePercentage" ||
-        disabledDates.includes(String(columnId))) return;
+    if (
+      columnId === "grant" ||
+      columnId === "totalHoursAvailable" ||
+      columnId === "totalHoursWorked" ||
+      columnId === "averagePercentage" ||
+      disabledDates.includes(String(columnId))
+    )
+      return;
 
     // Apply to all grant rows (excluding header and total rows)
     mockGrants.forEach((grant) => {
-      const targetRow = rows.find(row => row.rowId === grant.id);
+      const targetRow = rows.find((row) => row.rowId === grant.id);
       if (!targetRow) return;
 
-      const cellIndex = columns.findIndex(col => col.columnId === String(columnId));
+      const cellIndex = columns.findIndex(
+        (col) => col.columnId === String(columnId)
+      );
       if (cellIndex === -1) return;
 
       const cell = targetRow.cells[cellIndex];
@@ -276,7 +335,7 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({
           newCell: {
             ...cell,
             value: value,
-          }
+          },
         });
       }
     });
@@ -337,7 +396,10 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({
           // Handle time slot changes (from grant rows)
           else if (cell.grantId) {
             // Validate against maximum hours for the day
-            const maxHours = cell.maxHours || workdayHoursLookup[cell.date] || DEFAULT_WORKDAY_HOURS;
+            const maxHours =
+              cell.maxHours ||
+              workdayHoursLookup[cell.date] ||
+              DEFAULT_WORKDAY_HOURS;
 
             // Calculate current total hours for this day (excluding the current grant)
             const daySlots = timeSlots.filter(
@@ -349,7 +411,11 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({
             );
 
             if (newValue + currentTotalHours > maxHours) {
-              setError(`Cannot allocate ${newValue} hours. Maximum available: ${maxHours - currentTotalHours} hours for this day.`);
+              setError(
+                `Cannot allocate ${newValue} hours. Maximum available: ${
+                  maxHours - currentTotalHours
+                } hours for this day.`
+              );
               return;
             }
 
@@ -390,12 +456,22 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({
         // Execute both batch updates
         const promises = [];
 
-        if (timeSlotBatch.create?.length || timeSlotBatch.update?.length || timeSlotBatch.delete?.length) {
+        if (
+          timeSlotBatch.create?.length ||
+          timeSlotBatch.update?.length ||
+          timeSlotBatch.delete?.length
+        ) {
           promises.push(batchUpdateMutation.mutateAsync(timeSlotBatch));
         }
 
-        if (workdayHoursBatch.create?.length || workdayHoursBatch.update?.length || workdayHoursBatch.delete?.length) {
-          promises.push(batchUpdateWorkdayHoursMutation.mutateAsync(workdayHoursBatch));
+        if (
+          workdayHoursBatch.create?.length ||
+          workdayHoursBatch.update?.length ||
+          workdayHoursBatch.delete?.length
+        ) {
+          promises.push(
+            batchUpdateWorkdayHoursMutation.mutateAsync(workdayHoursBatch)
+          );
         }
 
         await Promise.all(promises);
@@ -405,38 +481,56 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({
         setError(apiError.message || "Failed to update timesheet");
       }
     },
-    [timeSlots, workdayHours, workdayHoursLookup, batchUpdateMutation, batchUpdateWorkdayHoursMutation, refetch, userId]
+    [
+      timeSlots,
+      workdayHours,
+      workdayHoursLookup,
+      batchUpdateMutation,
+      batchUpdateWorkdayHoursMutation,
+      refetch,
+      userId,
+    ]
   );
 
   const handleCloseError = () => {
     setError(null);
   };
 
-  const handleFocusLocationChanged = useCallback((location: any) => {
-    const { rowId, columnId } = location;
+  const handleFocusLocationChanged = useCallback(
+    (location: any) => {
+      const { rowId, columnId } = location;
 
-    // Skip if it's header or total rows
-    if (rowId === "header" || rowId === "totalHoursAvailable" || rowId === "totalHoursUsed") return;
+      // Skip if it's header or total rows
+      if (
+        rowId === "header" ||
+        rowId === "totalHoursAvailable" ||
+        rowId === "totalHoursUsed"
+      )
+        return;
 
-    // Skip if it's the grant column
-    if (columnId === "grant") return;
+      // Skip if it's the grant column
+      if (columnId === "grant") return;
 
-    // Find the cell value
-    const targetRow = rows.find(row => row.rowId === rowId);
-    if (!targetRow) return;
+      // Find the cell value
+      const targetRow = rows.find((row) => row.rowId === rowId);
+      if (!targetRow) return;
 
-    const cellIndex = columns.findIndex(col => col.columnId === String(columnId));
-    if (cellIndex === -1) return;
+      const cellIndex = columns.findIndex(
+        (col) => col.columnId === String(columnId)
+      );
+      if (cellIndex === -1) return;
 
-    const cell = targetRow.cells[cellIndex];
-    if (cell.type === "number") {
-      setSelectedCell({
-        rowId,
-        columnId: String(columnId),
-        value: cell.value || 0
-      });
-    }
-  }, [rows, columns]);
+      const cell = targetRow.cells[cellIndex];
+      if (cell.type === "number") {
+        setSelectedCell({
+          rowId,
+          columnId: String(columnId),
+          value: cell.value || 0,
+        });
+      }
+    },
+    [rows, columns]
+  );
 
   const gridContent = (
     <>
@@ -444,7 +538,9 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({
         <Box sx={{ mb: 2 }}>
           <Stack direction="row" spacing={2} alignItems="center">
             <Typography variant="body2">
-              Selected: {selectedCell.value}h (Row: {mockGrants.find(g => g.id === selectedCell.rowId)?.name}, Date: {format(new Date(selectedCell.columnId), "MMM dd")})
+              Selected: {selectedCell.value}h (Row:{" "}
+              {mockGrants.find((g) => g.id === selectedCell.rowId)?.name}, Date:{" "}
+              {format(new Date(selectedCell.columnId), "MMM dd")})
             </Typography>
             <Button
               variant="outlined"
@@ -466,8 +562,9 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({
         </Box>
       )}
 
-      <Box sx={{ height: showCard ? "calc(100% - 80px)" : "100%", overflow: "auto" }}>
+      <Box className="timesheet-grid">
         <ReactGrid
+          stickyLeftColumns={1}
           rows={rows}
           columns={columns}
           onCellsChanged={handleChanges}
@@ -475,6 +572,7 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({
           enableRangeSelection
           enableRowSelection
           enableFillHandle
+          enableColumnSelection
         />
       </Box>
 
@@ -500,11 +598,25 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({
   }
 
   return (
-    <Card sx={{ p: 2, height: "100%" }}>
-      <Typography variant="h6" gutterBottom>
-        {title || `Timesheet Grid - ${format(periodStart, "MMM dd")} to ${format(periodEnd, "MMM dd, yyyy")}`}
+    <Box sx={{ height: "100%" }}>
+      <Typography variant="h5" gutterBottom sx={{ fontWeight: 600, mb: 3 }}>
+        {title ||
+          `Timesheet Grid - ${format(periodStart, "MMM dd")} to ${format(
+            periodEnd,
+            "MMM dd, yyyy"
+          )}`}
       </Typography>
-      {gridContent}
-    </Card>
+      <Box
+        sx={{
+          backgroundColor: "#ffffff",
+          borderRadius: 2,
+          border: "1px solid #e0e0e0",
+          overflow: "hidden",
+          height: "calc(100% - 80px)",
+        }}
+      >
+        {gridContent}
+      </Box>
+    </Box>
   );
 };

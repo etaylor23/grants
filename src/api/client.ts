@@ -43,6 +43,23 @@ export class ApiClient {
     });
   }
 
+  static async getGrantTimeSlots(
+    grantId: string,
+    startDate: string,
+    endDate: string
+  ): Promise<TimeSlot[]> {
+    await delay(300);
+
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+
+    return mockTimeSlots.filter((slot) => {
+      if (slot.grantId !== grantId) return false;
+      const slotDate = new Date(slot.date);
+      return slotDate >= start && slotDate <= end;
+    });
+  }
+
   static async batchUpdateTimeSlots(batch: TimeSlotBatch): Promise<void> {
     await delay(400);
 

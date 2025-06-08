@@ -22,6 +22,18 @@ export const useTimeSlots = (
   });
 };
 
+export const useGrantTimeSlots = (
+  grantId: string,
+  startDate: string,
+  endDate: string
+) => {
+  return useQuery({
+    queryKey: ["grant-timeslots", grantId, startDate, endDate],
+    queryFn: () => ApiClient.getGrantTimeSlots(grantId, startDate, endDate),
+    staleTime: 2 * 60 * 1000, // 2 minutes
+  });
+};
+
 export const useBatchUpdateTimeSlots = () => {
   const queryClient = useQueryClient();
 
