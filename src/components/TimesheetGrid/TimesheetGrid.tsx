@@ -130,13 +130,6 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({
       cells: [
         { type: "header", text: "Grant" } as HeaderCell,
         { type: "header", text: "Total Hours Available to Work" } as HeaderCell,
-        ...periodDays.map(
-          (day) =>
-            ({
-              type: "header",
-              text: formatDateOrdinal(day),
-            } as HeaderCell)
-        ),
         {
           type: "header",
           text: "Total Hours Worked on Grants in Time Period",
@@ -145,6 +138,13 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({
           type: "header",
           text: "Average Percentage in Time Period",
         } as HeaderCell,
+        ...periodDays.map(
+          (day) =>
+            ({
+              type: "header",
+              text: formatDateOrdinal(day),
+            } as HeaderCell)
+        ),
       ],
     };
 
@@ -173,6 +173,12 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({
         } as TextCell,
       ];
 
+      // Add calculated columns
+      cells.push(
+        { type: "text", text: `${totalHoursWorked.toFixed(1)}h` } as TextCell,
+        { type: "text", text: `${averagePercentage.toFixed(1)}%` } as TextCell
+      );
+
       periodDays.forEach((day) => {
         const dateStr = format(day, "yyyy-MM-dd");
         const slot = timeSlots.find(
@@ -190,12 +196,6 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({
           nonEditable: isDisabled,
         } as NumberCell & { date: string; grantId: string; maxHours: number; nonEditable?: boolean });
       });
-
-      // Add calculated columns
-      cells.push(
-        { type: "text", text: `${totalHoursWorked.toFixed(1)}h` } as TextCell,
-        { type: "text", text: `${averagePercentage.toFixed(1)}%` } as TextCell
-      );
 
       return {
         rowId: grant.id,
