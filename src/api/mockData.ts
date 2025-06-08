@@ -1,4 +1,4 @@
-import { User, Grant, Workday, TimeSlot } from "../models/types";
+import { User, Grant, Workday, TimeSlot, WorkdayHours } from "../models/types";
 
 export const mockUsers: User[] = [
   { id: "user1", name: "Alice Johnson", email: "alice@company.com" },
@@ -52,6 +52,7 @@ const generateMockTimeSlots = (userId: string): TimeSlot[] => {
 
 export const mockWorkdays: Record<string, Workday> = {};
 export const mockTimeSlots: TimeSlot[] = [];
+export const mockWorkdayHours: WorkdayHours[] = [];
 
 // Initialize mock data - start completely empty
 // Users will add workdays by clicking dates

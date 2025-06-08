@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { ApiClient } from "./client";
-import { TimeSlotBatch, ApiError } from "../models/types";
+import { TimeSlotBatch, WorkdayHoursBatch, ApiError } from "../models/types";
 
 export const useWorkdays = (userId: string, year: number) => {
   return useQuery({
@@ -153,6 +153,56 @@ export const useAddBulkWorkdays = () => {
     },
     onError: (error) => {
       console.error("Bulk workday addition failed:", error);
+    },
+  });
+};
+
+export const useWorkdayHours = (
+  userId: string,
+  startDate: string,
+  endDate: string
+) => {
+  return useQuery({
+    queryKey: ["workdayHours", userId, startDate, endDate],
+    queryFn: () => ApiClient.getWorkdayHours(userId, startDate, endDate),
+    staleTime: 2 * 60 * 1000, // 2 minutes
+  });
+};
+
+export const useBatchUpdateWorkdayHours = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (batch: WorkdayHoursBatch) => ApiClient.batchUpdateWorkdayHours(batch),
+    onSuccess: () => {
+      // Invalidate all workday hours queries
+      queryClient.invalidateQueries({ queryKey: ["workdayHours"] });
+    },
+    onError: (error) => {
+      console.error("Workday hours update failed:", error);
+    },
+  });
+};
+
+export const useCreateDefaultWorkdayHours = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      userId,
+      date,
+      availableHours,
+    }: {
+      userId: string;
+      date: string;
+      availableHours?: number;
+    }) => ApiClient.createDefaultWorkdayHours(userId, date, availableHours),
+    onSuccess: () => {
+      // Invalidate workday hours queries
+      queryClient.invalidateQueries({ queryKey: ["workdayHours"] });
+    },
+    onError: (error) => {
+      console.error("Default workday hours creation failed:", error);
     },
   });
 };

@@ -1,5 +1,6 @@
-import { Workday, TimeSlot, TimeSlotBatch, ApiError } from "../models/types";
-import { mockWorkdays, mockTimeSlots } from "./mockData";
+import { Workday, TimeSlot, TimeSlotBatch, WorkdayHours, WorkdayHoursBatch } from "../models/types";
+import { mockWorkdays, mockTimeSlots, mockWorkdayHours } from "./mockData";
+import { DEFAULT_WORKDAY_HOURS } from "../utils/dateUtils";
 
 // Simulate API delay
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -45,31 +46,10 @@ export class ApiClient {
   static async batchUpdateTimeSlots(batch: TimeSlotBatch): Promise<void> {
     await delay(400);
 
-    // Validate total allocation doesn't exceed 100% per day
-    const dayTotals: Record<string, number> = {};
-
-    // Calculate current totals
-    mockTimeSlots.forEach((slot) => {
-      const key = `${slot.userId}-${slot.date}`;
-      dayTotals[key] = (dayTotals[key] || 0) + slot.allocationPercent;
-    });
-
-    // Apply changes and validate
+    // Apply changes - validation is now handled in the frontend
     if (batch.create) {
       for (const slot of batch.create) {
-        const key = `${slot.userId}-${slot.date}`;
-        const newTotal = (dayTotals[key] || 0) + slot.allocationPercent;
-
-        if (newTotal > 100) {
-          const error: ApiError = {
-            message: `Total allocation for ${slot.date} would exceed 100%`,
-            code: "ALLOCATION_EXCEEDED",
-          };
-          throw error;
-        }
-
         mockTimeSlots.push(slot);
-        dayTotals[key] = newTotal;
       }
     }
 
@@ -83,21 +63,7 @@ export class ApiClient {
         );
 
         if (index !== -1) {
-          const key = `${updatedSlot.userId}-${updatedSlot.date}`;
-          const oldPercent = mockTimeSlots[index].allocationPercent;
-          const newTotal =
-            (dayTotals[key] || 0) - oldPercent + updatedSlot.allocationPercent;
-
-          if (newTotal > 100) {
-            const error: ApiError = {
-              message: `Total allocation for ${updatedSlot.date} would exceed 100%`,
-              code: "ALLOCATION_EXCEEDED",
-            };
-            throw error;
-          }
-
           mockTimeSlots[index] = updatedSlot;
-          dayTotals[key] = newTotal;
         }
       }
     }
@@ -214,5 +180,84 @@ export class ApiClient {
     }
 
     console.log(`Added ${addedCount} workdays for user ${userId}`);
+  }
+
+  static async getWorkdayHours(
+    userId: string,
+    startDate: string,
+    endDate: string
+  ): Promise<WorkdayHours[]> {
+    await delay(200);
+
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+
+    return mockWorkdayHours.filter((hours) => {
+      if (hours.userId !== userId) return false;
+      const hoursDate = new Date(hours.date);
+      return hoursDate >= start && hoursDate <= end;
+    });
+  }
+
+  static async batchUpdateWorkdayHours(batch: WorkdayHoursBatch): Promise<void> {
+    await delay(300);
+
+    if (batch.create) {
+      for (const hours of batch.create) {
+        // Remove existing entry if it exists
+        const existingIndex = mockWorkdayHours.findIndex(
+          (h) => h.userId === hours.userId && h.date === hours.date
+        );
+        if (existingIndex !== -1) {
+          mockWorkdayHours.splice(existingIndex, 1);
+        }
+        mockWorkdayHours.push(hours);
+      }
+    }
+
+    if (batch.update) {
+      for (const hours of batch.update) {
+        const existingIndex = mockWorkdayHours.findIndex(
+          (h) => h.userId === hours.userId && h.date === hours.date
+        );
+        if (existingIndex !== -1) {
+          mockWorkdayHours[existingIndex] = hours;
+        } else {
+          mockWorkdayHours.push(hours);
+        }
+      }
+    }
+
+    if (batch.delete) {
+      for (const deleteSpec of batch.delete) {
+        const index = mockWorkdayHours.findIndex(
+          (h) => h.userId === deleteSpec.userId && h.date === deleteSpec.date
+        );
+        if (index !== -1) {
+          mockWorkdayHours.splice(index, 1);
+        }
+      }
+    }
+  }
+
+  static async createDefaultWorkdayHours(
+    userId: string,
+    date: string,
+    availableHours: number = DEFAULT_WORKDAY_HOURS
+  ): Promise<void> {
+    await delay(100);
+
+    // Check if already exists
+    const existing = mockWorkdayHours.find(
+      (h) => h.userId === userId && h.date === date
+    );
+
+    if (!existing) {
+      mockWorkdayHours.push({
+        userId,
+        date,
+        availableHours,
+      });
+    }
   }
 }
