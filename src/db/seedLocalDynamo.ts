@@ -61,6 +61,27 @@ const GRANTS: Grant[] = [
     StartDate: "2025-01-01",
     EndDate: "2025-12-31",
     ManagerUserID: "U-11111"
+  },
+  {
+    PK: "G-004",
+    Title: "Machine Learning Platform",
+    StartDate: "2025-01-15",
+    EndDate: "2025-06-30",
+    ManagerUserID: "U-12345"
+  },
+  {
+    PK: "G-005",
+    Title: "Cloud Infrastructure Modernization",
+    StartDate: "2025-02-01",
+    EndDate: "2025-08-31",
+    ManagerUserID: "U-67890"
+  },
+  {
+    PK: "G-006",
+    Title: "Data Analytics Enhancement",
+    StartDate: "2025-01-01",
+    EndDate: "2025-04-30",
+    ManagerUserID: "U-11111"
   }
 ];
 

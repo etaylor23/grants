@@ -9,6 +9,7 @@ import {
 } from "@silevis/reactgrid";
 import "./TimesheetGrid.scss";
 import { Box, Typography, Alert, Snackbar, Button, Stack } from "@mui/material";
+import { BulkAllocationModal } from "../BulkAllocationModal";
 // IndexedDB data hooks
 import {
   useTimeSlots,
@@ -58,6 +59,7 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({
     columnId: string;
     value: number;
   } | null>(null);
+  const [bulkAllocationModalOpen, setBulkAllocationModalOpen] = useState(false);
 
   const currentDate = new Date();
   const periodStart = startDate || startOfMonth(currentDate);
@@ -579,6 +581,21 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({
 
   const gridContent = (
     <>
+      {/* Bulk Allocation Controls */}
+      <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Typography variant="h6" sx={{ fontWeight: 500 }}>
+          Time Allocation Grid
+        </Typography>
+        <Button
+          variant="contained"
+          color="primary"
+          onClick={() => setBulkAllocationModalOpen(true)}
+          sx={{ minWidth: 150 }}
+        >
+          Bulk Allocation
+        </Button>
+      </Box>
+
       {showRowColumnControls && selectedCell && (
         <Box sx={{ mb: 2 }}>
           <Stack direction="row" spacing={2} alignItems="center">
@@ -634,6 +651,16 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({
           {error}
         </Alert>
       </Snackbar>
+
+      {/* Bulk Allocation Modal */}
+      <BulkAllocationModal
+        open={bulkAllocationModalOpen}
+        onClose={() => setBulkAllocationModalOpen(false)}
+        userId={userId}
+        userName={individual ? `${individual.FirstName} ${individual.LastName}` : 'User'}
+        initialStartDate={periodStart}
+        initialEndDate={periodEnd}
+      />
     </>
   );
 

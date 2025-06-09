@@ -45,10 +45,24 @@ export const TimesheetSynopsis: React.FC<TimesheetSynopsisProps> = ({
   workdayHours,
 }) => {
   const { data: individuals = [] } = useIndividuals();
-  
+
   // Find the individual's data for salary calculations
   const individual = individuals.find((ind: any) => ind.PK === userId);
   const annualGross = individual?.AnnualGross || 0;
+
+  // Debug logging
+  console.log("TimesheetSynopsis Debug:", {
+    userId,
+    userName,
+    individualsCount: individuals.length,
+    individual,
+    annualGross,
+    timeSlotsCount: timeSlots.length,
+    grantsCount: grants.length,
+    workdayHoursKeys: Object.keys(workdayHours).length,
+    startDate,
+    endDate,
+  });
   
   // Calculate working days in the period (assuming 260 working days per year)
   const workingDaysPerYear = 260;
@@ -137,6 +151,30 @@ export const TimesheetSynopsis: React.FC<TimesheetSynopsisProps> = ({
     if (percent >= 70) return 'warning';
     return 'error';
   };
+
+  // Loading and error states
+  if (!individual) {
+    return (
+      <Box sx={{ mt: 4, p: 3, textAlign: 'center' }}>
+        <Typography variant="h6" color="text.secondary">
+          Loading individual data...
+        </Typography>
+      </Box>
+    );
+  }
+
+  if (timeSlots.length === 0 && grants.length === 0) {
+    return (
+      <Box sx={{ mt: 4, p: 3, textAlign: 'center' }}>
+        <Typography variant="h6" color="text.secondary">
+          No timesheet data available for this period
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          Try selecting a different date range or ensure grants and time slots are properly configured.
+        </Typography>
+      </Box>
+    );
+  }
 
   return (
     <Box sx={{ mt: 4 }}>
