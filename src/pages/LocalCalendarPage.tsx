@@ -9,9 +9,9 @@ export const LocalCalendarPage: React.FC = () => {
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [selectedUser, setSelectedUser] = useState<Individual | null>(null);
   const [dateRange, setDateRange] = useState<DateRange>({
-    startDate: startOfMonth(new Date()),
-    endDate: endOfMonth(new Date()),
-    label: "Current Month",
+    startDate: new Date('2025-01-01'),
+    endDate: new Date('2025-02-28'),
+    label: "January-February 2025",
   });
 
   const handleUserChange = (userId: string, user: Individual) => {

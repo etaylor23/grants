@@ -6,6 +6,7 @@ import interactionPlugin from "@fullcalendar/interaction";
 import {
   Box,
   Typography,
+  Button,
 } from "@mui/material";
 import {
   useWorkdayHours,
@@ -36,14 +37,14 @@ export const LocalCalendarView: React.FC<LocalCalendarViewProps> = ({
   const [timesheetEndDate, setTimesheetEndDate] = useState<Date>(new Date());
   const [calendarApi, setCalendarApi] = useState<any>(null);
 
-  // Use provided date range or default to current month
+  // Use provided date range or default to January 2025 (where we have seeded data)
   const currentDateRange = dateRange || {
-    startDate: startOfMonth(new Date()),
-    endDate: endOfMonth(new Date()),
-    label: "Current Month",
+    startDate: new Date('2025-01-01'),
+    endDate: new Date('2025-02-28'),
+    label: "January-February 2025",
   };
 
-  const year = new Date().getFullYear();
+  const year = 2025; // Use 2025 where we have seeded data
   const periodStart = format(currentDateRange.startDate, "yyyy-MM-dd");
   const periodEnd = format(currentDateRange.endDate, "yyyy-MM-dd");
 
@@ -55,8 +56,14 @@ export const LocalCalendarView: React.FC<LocalCalendarViewProps> = ({
   console.log("LocalCalendarView data:", {
     userId,
     userName,
+    periodStart,
+    periodEnd,
+    year,
+    workdayHours,
     workdayHoursCount: Object.keys(workdayHours).length,
+    timeSlots,
     timeSlotsCount: timeSlots.length,
+    grants,
     grantsCount: grants.length,
   });
 
@@ -65,13 +72,24 @@ export const LocalCalendarView: React.FC<LocalCalendarViewProps> = ({
     const events: any[] = [];
     const userColor = generateUserColor(userName);
 
+    console.log("Creating calendar events...", {
+      workdayHoursEntries: Object.entries(workdayHours),
+      timeSlots,
+      userName,
+      userColor
+    });
+
     // Create events for each workday
     Object.entries(workdayHours).forEach(([date, hours]) => {
+      console.log(`Processing date ${date} with ${hours} hours`);
+
       if (hours > 0) {
         // Find time slots for this date
         const daySlots = timeSlots.filter((slot: any) => slot.Date === date);
         const totalHours = daySlots.reduce((sum, slot: any) => sum + (slot.HoursAllocated || 0), 0);
         const totalPercent = Math.round((totalHours / hours) * 100);
+
+        console.log(`Date ${date}: ${daySlots.length} slots, ${totalHours}h total`);
 
         const event = {
           id: `workday-${userId}-${date}`,
@@ -91,11 +109,48 @@ export const LocalCalendarView: React.FC<LocalCalendarViewProps> = ({
           },
         };
 
+        console.log(`Created event for ${date}:`, event);
         events.push(event);
       }
     });
 
-    console.log(`Created ${events.length} calendar events for ${userName}`);
+    // If no events were created, add some test events to verify click functionality
+    if (events.length === 0 && userId && userName) {
+      console.log("No events from data, creating test events...");
+
+      // Create test events for the first few days of the period
+      const testDates = [
+        format(currentDateRange.startDate, 'yyyy-MM-dd'),
+        format(new Date(currentDateRange.startDate.getTime() + 24 * 60 * 60 * 1000), 'yyyy-MM-dd'),
+        format(new Date(currentDateRange.startDate.getTime() + 2 * 24 * 60 * 60 * 1000), 'yyyy-MM-dd'),
+      ];
+
+      testDates.forEach((date, index) => {
+        const testEvent = {
+          id: `test-${userId}-${date}`,
+          title: `${userName}: Test Event ${index + 1}`,
+          date,
+          backgroundColor: userColor,
+          borderColor: "transparent",
+          textColor: "white",
+          allDay: true,
+          extendedProps: {
+            userId,
+            userName,
+            totalHours: 8,
+            availableHours: 8,
+            totalPercent: 100,
+            daySlots: [],
+            isTestEvent: true,
+          },
+        };
+        events.push(testEvent);
+      });
+
+      console.log(`Created ${testDates.length} test events`);
+    }
+
+    console.log(`Final events count: ${events.length} for ${userName}:`, events);
     return events;
   }, [userId, userName, workdayHours, timeSlots]);
 
@@ -127,23 +182,76 @@ export const LocalCalendarView: React.FC<LocalCalendarViewProps> = ({
 
   const handleDateClick = (info: any) => {
     const dateStr = info.dateStr;
-    console.log("Date clicked:", dateStr);
+    console.log("📅 Date clicked:", dateStr, info);
     onDateSelect?.(dateStr);
   };
 
   const handleEventClick = (info: any) => {
+    console.log("🎯 Event clicked:", info.event, info);
+
     // Open timesheet modal when clicking on a workday event
     const eventUserId = info.event.extendedProps?.userId;
     const eventUserName = info.event.extendedProps?.userName;
 
+    console.log("Event details:", { eventUserId, eventUserName });
+
     if (eventUserId && eventUserName) {
       const period = getCurrentCalendarPeriod();
+      console.log("Opening timesheet modal for period:", period);
       setTimesheetStartDate(period.start);
       setTimesheetEndDate(period.end);
       setTimesheetModalOpen(true);
+    } else {
+      console.warn("Event missing user details:", info.event.extendedProps);
     }
 
     onDateSelect?.(info.event.startStr);
+  };
+
+  // Debug function to manually seed database
+  const handleDebugSeed = async () => {
+    try {
+      console.log("🌱 Manually seeding database...");
+      const { seedLocalDynamo } = await import('../../db/seedLocalDynamo');
+      await seedLocalDynamo();
+      console.log("✅ Database seeded successfully");
+
+      // Refresh the page to reload data
+      window.location.reload();
+    } catch (error) {
+      console.error("❌ Database seeding failed:", error);
+    }
+  };
+
+  // Debug function to check database contents
+  const handleDebugDatabase = async () => {
+    try {
+      console.log("🔍 Checking database contents...");
+      const { db } = await import('../../db/schema');
+
+      const individuals = await db.individuals.toArray();
+      const grants = await db.grants.toArray();
+      const workdays = await db.workdays.toArray();
+      const workdayHours = await db.workdayHours.toArray();
+      const timeslots = await db.timeslots.toArray();
+
+      console.log("📊 Database contents:", {
+        individuals: individuals.length,
+        grants: grants.length,
+        workdays: workdays.length,
+        workdayHours: workdayHours.length,
+        timeslots: timeslots.length,
+      });
+
+      console.log("👥 Individuals:", individuals);
+      console.log("💰 Grants:", grants);
+      console.log("📅 Workdays:", workdays);
+      console.log("⏰ Workday Hours:", workdayHours);
+      console.log("🎯 Time Slots:", timeslots);
+
+    } catch (error) {
+      console.error("❌ Database check failed:", error);
+    }
   };
 
   return (
@@ -160,6 +268,15 @@ export const LocalCalendarView: React.FC<LocalCalendarViewProps> = ({
           <strong>How to use:</strong> Click on workday events to edit allocations in the timesheet view.
           <br />
           <strong>Event details:</strong> Shows hours allocated vs available hours and percentage utilization.
+          <br />
+          <strong>Debug:</strong>
+          <Button size="small" onClick={handleDebugDatabase} sx={{ ml: 1, mr: 1 }}>
+            Check Database
+          </Button>
+          <Button size="small" onClick={handleDebugSeed} sx={{ mr: 1 }}>
+            Seed Database
+          </Button>
+          Events: {events.length}
         </div>
 
         <div className={styles.section}>
