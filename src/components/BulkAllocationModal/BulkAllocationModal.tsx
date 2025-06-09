@@ -15,6 +15,7 @@ import {
   Grid,
   Alert,
   Chip,
+  Card,
   Table,
   TableBody,
   TableCell,
@@ -40,6 +41,7 @@ interface BulkAllocationModalProps {
   userName: string;
   initialStartDate?: Date;
   initialEndDate?: Date;
+  onAllocationComplete?: () => void;
 }
 
 interface BulkAllocationData {
@@ -74,6 +76,7 @@ export const BulkAllocationModal: React.FC<BulkAllocationModalProps> = ({
   userName,
   initialStartDate,
   initialEndDate,
+  onAllocationComplete,
 }) => {
   const [formData, setFormData] = useState<BulkAllocationData>({
     ...initialFormData,
@@ -83,6 +86,18 @@ export const BulkAllocationModal: React.FC<BulkAllocationModalProps> = ({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [showPreview, setShowPreview] = useState(false);
   const [conflictResolution, setConflictResolution] = useState<'reduce' | 'skip' | 'cancel'>('reduce');
+  const [showResults, setShowResults] = useState(false);
+  const [allocationResults, setAllocationResults] = useState<{
+    totalDaysProcessed: number;
+    totalHoursAllocated: number;
+    conflictsResolved: number;
+    daysSkipped: number;
+    operationsApplied: Array<{
+      date: string;
+      hours: number;
+      action: 'created' | 'updated' | 'reduced';
+    }>;
+  } | null>(null);
 
   // Data hooks
   const { data: grants = [] } = useGrants();
@@ -219,20 +234,32 @@ export const BulkAllocationModal: React.FC<BulkAllocationModalProps> = ({
       const selectedGrant = grants.find((g: any) => g.PK === formData.grantId);
       if (!selectedGrant) return;
 
+      // Track what we're doing for reporting
+      const operationsApplied: Array<{
+        date: string;
+        hours: number;
+        action: 'created' | 'updated' | 'reduced';
+      }> = [];
+      let conflictsResolved = 0;
+      let daysSkipped = 0;
+
       // Determine which days to apply based on conflict resolution
       let daysToApply = allocationPreview;
       if (validationResult.hasConflicts) {
         if (conflictResolution === 'skip') {
           daysToApply = validationResult.validDays;
+          daysSkipped = validationResult.conflicts.length;
         } else if (conflictResolution === 'reduce') {
           // Reduce allocation to fit available capacity
           daysToApply = allocationPreview.map(day => {
             if (day.isOverAllocated) {
               const maxAllowableHours = day.availableHours - day.currentAllocatedHours;
+              const reducedHours = Math.max(0, maxAllowableHours);
+              conflictsResolved++;
               return {
                 ...day,
-                newAllocationHours: Math.max(0, maxAllowableHours),
-                totalAfterAllocation: day.currentAllocatedHours + Math.max(0, maxAllowableHours),
+                newAllocationHours: reducedHours,
+                totalAfterAllocation: day.currentAllocatedHours + reducedHours,
                 isOverAllocated: false,
               };
             }
@@ -251,6 +278,21 @@ export const BulkAllocationModal: React.FC<BulkAllocationModalProps> = ({
 
       daysToApply.forEach(day => {
         if (day.newAllocationHours > 0) {
+          // Check if this is an existing slot or new one
+          const existingSlot = timeSlots.find((slot: any) =>
+            slot.Date === day.date && slot.GrantID === formData.grantId
+          );
+
+          const action = existingSlot ?
+            (day.isOverAllocated && conflictResolution === 'reduce' ? 'reduced' : 'updated') :
+            'created';
+
+          operationsApplied.push({
+            date: day.date,
+            hours: day.newAllocationHours,
+            action
+          });
+
           operations.push({
             type: 'put',
             timeSlot: {
@@ -265,15 +307,35 @@ export const BulkAllocationModal: React.FC<BulkAllocationModalProps> = ({
       });
 
       if (operations.length > 0) {
+        console.log('Applying bulk allocation operations:', operations);
         await saveSlotsMutation.mutateAsync({
           userId,
           operations
         });
-      }
 
-      onClose();
+        // Calculate results for reporting
+        const totalHoursAllocated = operationsApplied.reduce((sum, op) => sum + op.hours, 0);
+
+        setAllocationResults({
+          totalDaysProcessed: operationsApplied.length,
+          totalHoursAllocated,
+          conflictsResolved,
+          daysSkipped,
+          operationsApplied
+        });
+
+        setShowResults(true);
+        setShowPreview(false);
+
+        // Notify parent component to refresh data
+        onAllocationComplete?.();
+      } else {
+        console.warn('No operations to apply');
+        onClose();
+      }
     } catch (error) {
       console.error('Failed to apply bulk allocation:', error);
+      // TODO: Show error message to user
     }
   };
 
@@ -281,6 +343,8 @@ export const BulkAllocationModal: React.FC<BulkAllocationModalProps> = ({
     setFormData(initialFormData);
     setErrors({});
     setShowPreview(false);
+    setShowResults(false);
+    setAllocationResults(null);
     onClose();
   };
 
@@ -293,7 +357,100 @@ export const BulkAllocationModal: React.FC<BulkAllocationModalProps> = ({
       </DialogTitle>
       
       <DialogContent>
-        {!showPreview ? (
+        {showResults ? (
+          // Results Step
+          <Box sx={{ mt: 2 }}>
+            <Typography variant="h6" gutterBottom color="success.main">
+              ✅ Bulk Allocation Applied Successfully!
+            </Typography>
+
+            <Grid container spacing={2} sx={{ mb: 3 }}>
+              <Grid item xs={6} sm={3}>
+                <Card sx={{ p: 2, textAlign: 'center', bgcolor: 'success.50' }}>
+                  <Typography variant="h4" color="success.main">
+                    {allocationResults?.totalDaysProcessed || 0}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Days Processed
+                  </Typography>
+                </Card>
+              </Grid>
+              <Grid item xs={6} sm={3}>
+                <Card sx={{ p: 2, textAlign: 'center', bgcolor: 'primary.50' }}>
+                  <Typography variant="h4" color="primary.main">
+                    {allocationResults?.totalHoursAllocated.toFixed(1) || 0}h
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Hours Allocated
+                  </Typography>
+                </Card>
+              </Grid>
+              <Grid item xs={6} sm={3}>
+                <Card sx={{ p: 2, textAlign: 'center', bgcolor: 'warning.50' }}>
+                  <Typography variant="h4" color="warning.main">
+                    {allocationResults?.conflictsResolved || 0}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Conflicts Resolved
+                  </Typography>
+                </Card>
+              </Grid>
+              <Grid item xs={6} sm={3}>
+                <Card sx={{ p: 2, textAlign: 'center', bgcolor: 'error.50' }}>
+                  <Typography variant="h4" color="error.main">
+                    {allocationResults?.daysSkipped || 0}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Days Skipped
+                  </Typography>
+                </Card>
+              </Grid>
+            </Grid>
+
+            <Typography variant="h6" gutterBottom>
+              Detailed Actions Taken
+            </Typography>
+
+            <TableContainer component={Paper} sx={{ maxHeight: 300 }}>
+              <Table size="small">
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Date</TableCell>
+                    <TableCell align="right">Hours Allocated</TableCell>
+                    <TableCell align="center">Action</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {allocationResults?.operationsApplied.map((operation) => (
+                    <TableRow key={operation.date}>
+                      <TableCell>{format(new Date(operation.date), 'MMM dd, yyyy')}</TableCell>
+                      <TableCell align="right">{operation.hours.toFixed(1)}h</TableCell>
+                      <TableCell align="center">
+                        <Chip
+                          label={operation.action}
+                          size="small"
+                          color={
+                            operation.action === 'created' ? 'success' :
+                            operation.action === 'updated' ? 'primary' :
+                            'warning'
+                          }
+                        />
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+
+            <Alert severity="info" sx={{ mt: 2 }}>
+              <Typography variant="body2">
+                <strong>Grant:</strong> {selectedGrant?.Title}<br/>
+                <strong>Allocation:</strong> {formData.allocationPercent}% of daily hours<br/>
+                <strong>Period:</strong> {format(new Date(formData.startDate), 'MMM dd')} - {format(new Date(formData.endDate), 'MMM dd, yyyy')}
+              </Typography>
+            </Alert>
+          </Box>
+        ) : !showPreview ? (
           // Form Step
           <Box sx={{ mt: 2 }}>
             <Grid container spacing={3}>
@@ -459,26 +616,34 @@ export const BulkAllocationModal: React.FC<BulkAllocationModalProps> = ({
       </DialogContent>
       
       <DialogActions>
-        <Button onClick={handleClose}>Cancel</Button>
-        {!showPreview ? (
-          <Button 
-            onClick={handlePreview} 
-            variant="contained"
-            disabled={!formData.startDate || !formData.endDate || !formData.grantId}
-          >
-            Preview Allocation
+        {showResults ? (
+          <Button onClick={handleClose} variant="contained" color="primary">
+            Done
           </Button>
         ) : (
           <>
-            <Button onClick={() => setShowPreview(false)}>Back to Form</Button>
-            <Button 
-              onClick={handleApply} 
-              variant="contained"
-              disabled={!validationResult.canProceed || saveSlotsMutation.isPending}
-              color={validationResult.hasConflicts ? 'warning' : 'primary'}
-            >
-              {saveSlotsMutation.isPending ? 'Applying...' : 'Apply Allocation'}
-            </Button>
+            <Button onClick={handleClose}>Cancel</Button>
+            {!showPreview ? (
+              <Button
+                onClick={handlePreview}
+                variant="contained"
+                disabled={!formData.startDate || !formData.endDate || !formData.grantId}
+              >
+                Preview Allocation
+              </Button>
+            ) : (
+              <>
+                <Button onClick={() => setShowPreview(false)}>Back to Form</Button>
+                <Button
+                  onClick={handleApply}
+                  variant="contained"
+                  disabled={!validationResult.canProceed || saveSlotsMutation.isPending}
+                  color={validationResult.hasConflicts ? 'warning' : 'primary'}
+                >
+                  {saveSlotsMutation.isPending ? 'Applying...' : 'Apply Allocation'}
+                </Button>
+              </>
+            )}
           </>
         )}
       </DialogActions>

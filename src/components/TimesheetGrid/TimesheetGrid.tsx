@@ -660,6 +660,10 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({
         userName={individual ? `${individual.FirstName} ${individual.LastName}` : 'User'}
         initialStartDate={periodStart}
         initialEndDate={periodEnd}
+        onAllocationComplete={() => {
+          // Force refresh of timesheet data
+          refetch();
+        }}
       />
     </>
   );
