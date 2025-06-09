@@ -39,6 +39,15 @@ $cell-editor-border-color: #1976d2;
   font-weight: 500 !important;
 }
 
+// Value cells (financial calculations)
+.rg-cell.value-cell {
+  background-color: #e8f5e8 !important;
+  border: 1px solid #4caf50 !important;
+  color: #2e7d32 !important;
+  font-weight: 600 !important;
+  text-align: right !important;
+}
+
 // Default cell styling
 .rg-cell {
   border: 1px solid #e0e0e0 !important;

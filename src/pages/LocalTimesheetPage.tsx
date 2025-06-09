@@ -2,9 +2,10 @@ import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { AppLayout } from "../components/Layout/AppLayout";
 import { TimesheetGrid } from "../components/TimesheetGrid/TimesheetGrid";
+import { TimesheetSynopsis } from "../components/TimesheetSynopsis";
 import { DateRange, DateRangeSelector } from "../components/DateRangeSelector";
 import { Individual } from "../db/schema";
-import { useIndividuals } from "../hooks/useLocalData";
+import { useIndividuals, useTimeSlots, useGrants, useWorkdayHours } from "../hooks/useLocalData";
 import { startOfMonth, endOfMonth } from "date-fns";
 import styles from "../components/Layout/ModernContainer.module.css";
 
@@ -24,14 +25,23 @@ export const LocalTimesheetPage: React.FC = () => {
   const { userSlug } = useParams<{ userSlug: string }>();
   const navigate = useNavigate();
   const { data: individuals = [] } = useIndividuals();
-  
+
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [selectedUser, setSelectedUser] = useState<Individual | null>(null);
   const [dateRange, setDateRange] = useState<DateRange>({
-    startDate: startOfMonth(new Date()),
-    endDate: endOfMonth(new Date()),
-    label: "Current Month",
+    startDate: new Date('2025-01-01'),
+    endDate: new Date('2025-02-28'),
+    label: "January-February 2025",
   });
+
+  // Fetch data for synopsis (only when user is selected)
+  const { data: timeSlots = [] } = useTimeSlots(
+    selectedUserId || '',
+    dateRange.startDate.toISOString().split('T')[0],
+    dateRange.endDate.toISOString().split('T')[0]
+  );
+  const { data: grants = [] } = useGrants();
+  const { data: workdayHours = {} } = useWorkdayHours(selectedUserId || '', 2025);
 
   // Find the user based on the slug
   useEffect(() => {
@@ -119,7 +129,7 @@ export const LocalTimesheetPage: React.FC = () => {
               </p>
             </div>
             <div className={styles.sectionContent}>
-              <TimesheetGrid 
+              <TimesheetGrid
                 userId={selectedUser.PK}
                 startDate={dateRange.startDate}
                 endDate={dateRange.endDate}
@@ -127,6 +137,17 @@ export const LocalTimesheetPage: React.FC = () => {
               />
             </div>
           </div>
+
+          {/* Timesheet Synopsis */}
+          <TimesheetSynopsis
+            userId={selectedUser.PK}
+            userName={`${selectedUser.FirstName} ${selectedUser.LastName}`}
+            startDate={dateRange.startDate}
+            endDate={dateRange.endDate}
+            timeSlots={timeSlots}
+            grants={grants}
+            workdayHours={workdayHours}
+          />
         </div>
       </div>
     </AppLayout>
