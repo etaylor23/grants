@@ -28,6 +28,8 @@ import {
 import { mockUsers } from "../../api/mockData";
 import { User, ViewMode } from "../../models/types";
 import { generateUserColor } from "../../utils/colors";
+import { UserPicker } from "../UserPicker";
+import { Individual } from "../../db/schema";
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -35,6 +37,8 @@ interface AppLayoutProps {
   onUsersChange: (users: User[]) => void;
   viewMode: ViewMode;
   onViewModeChange: (mode: ViewMode) => void;
+  selectedUserId?: string | null;
+  onUserChange?: (userId: string, user: Individual) => void;
 }
 
 export const AppLayout: React.FC<AppLayoutProps> = ({
@@ -43,6 +47,8 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
   onUsersChange,
   viewMode,
   onViewModeChange,
+  selectedUserId,
+  onUserChange,
 }) => {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const navigate = useNavigate();
@@ -89,74 +95,86 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
           <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
             Grant & Vacation Tracker
           </Typography>
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-            <Typography variant="body2" sx={{ color: "white", mr: 1 }}>
-              Users:
-            </Typography>
-            <Stack direction="row" spacing={1}>
-              {selectedUsers.map((user) => (
-                <Chip
-                  key={user.id}
-                  label={user.name}
-                  size="small"
-                  sx={{
-                    backgroundColor: generateUserColor(user.name),
-                    color: "white",
-                    "& .MuiChip-deleteIcon": {
-                      color: "white",
-                    },
-                  }}
-                  onDelete={() => {
-                    const newUsers = selectedUsers.filter(
-                      (u) => u.id !== user.id
-                    );
-                    onUsersChange(newUsers);
-                  }}
-                />
-              ))}
-              {selectedUsers.length < mockUsers.length && (
-                <FormControl size="small" sx={{ minWidth: 100 }}>
-                  <Select
-                    value=""
-                    onChange={(e) => {
-                      const user = mockUsers.find(
-                        (u) => u.id === e.target.value
-                      );
-                      if (
-                        user &&
-                        !selectedUsers.find((u) => u.id === user.id)
-                      ) {
-                        onUsersChange([...selectedUsers, user]);
-                      }
-                    }}
-                    displayEmpty
+
+          {/* New User Picker for IndexedDB users */}
+          {onUserChange && (
+            <UserPicker
+              selectedUserId={selectedUserId || null}
+              onUserChange={onUserChange}
+            />
+          )}
+
+          {/* Legacy user selection for backward compatibility */}
+          {!onUserChange && (
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+              <Typography variant="body2" sx={{ color: "white", mr: 1 }}>
+                Users:
+              </Typography>
+              <Stack direction="row" spacing={1}>
+                {selectedUsers.map((user) => (
+                  <Chip
+                    key={user.id}
+                    label={user.name}
+                    size="small"
                     sx={{
+                      backgroundColor: generateUserColor(user.name),
                       color: "white",
-                      "& .MuiOutlinedInput-notchedOutline": {
-                        borderColor: "rgba(255, 255, 255, 0.23)",
-                      },
-                      "& .MuiSvgIcon-root": {
+                      "& .MuiChip-deleteIcon": {
                         color: "white",
                       },
                     }}
-                  >
-                    <MenuItem value="" disabled>
-                      Add User
-                    </MenuItem>
-                    {mockUsers
-                      .filter(
-                        (user) => !selectedUsers.find((u) => u.id === user.id)
-                      )
-                      .map((user) => (
-                        <MenuItem key={user.id} value={user.id}>
-                          {user.name}
-                        </MenuItem>
-                      ))}
-                  </Select>
-                </FormControl>
-              )}
-            </Stack>
-          </Box>
+                    onDelete={() => {
+                      const newUsers = selectedUsers.filter(
+                        (u) => u.id !== user.id
+                      );
+                      onUsersChange(newUsers);
+                    }}
+                  />
+                ))}
+                {selectedUsers.length < mockUsers.length && (
+                  <FormControl size="small" sx={{ minWidth: 100 }}>
+                    <Select
+                      value=""
+                      onChange={(e) => {
+                        const user = mockUsers.find(
+                          (u) => u.id === e.target.value
+                        );
+                        if (
+                          user &&
+                          !selectedUsers.find((u) => u.id === user.id)
+                        ) {
+                          onUsersChange([...selectedUsers, user]);
+                        }
+                      }}
+                      displayEmpty
+                      sx={{
+                        color: "white",
+                        "& .MuiOutlinedInput-notchedOutline": {
+                          borderColor: "rgba(255, 255, 255, 0.23)",
+                        },
+                        "& .MuiSvgIcon-root": {
+                          color: "white",
+                        },
+                      }}
+                    >
+                      <MenuItem value="" disabled>
+                        Add User
+                      </MenuItem>
+                      {mockUsers
+                        .filter(
+                          (user) => !selectedUsers.find((u) => u.id === user.id)
+                        )
+                        .map((user) => (
+                          <MenuItem key={user.id} value={user.id}>
+                            {user.name}
+                          </MenuItem>
+                        ))}
+                    </Select>
+                  </FormControl>
+                )}
+              </Stack>
+            </Box>
+          )}
         </Toolbar>
       </AppBar>
 
