@@ -7,7 +7,6 @@ import "./CalendarView.scss";
 import {
   Box,
   Typography,
-  Alert,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -37,15 +36,21 @@ import {
 import { User } from "../../models/types";
 import { generateUserColor } from "../../utils/colors";
 import { TimesheetModal } from "../TimesheetModal";
+import { DateRangeSelector, DateRange } from "../DateRangeSelector";
+import styles from "../Layout/ModernContainer.module.css";
 
 interface CalendarViewProps {
   selectedUsers: User[];
   onDateSelect?: (date: string) => void;
+  dateRange?: DateRange;
+  onDateRangeChange?: (range: DateRange) => void;
 }
 
 export const CalendarView: React.FC<CalendarViewProps> = ({
   selectedUsers,
   onDateSelect,
+  dateRange,
+  onDateRangeChange,
 }) => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string>("");
@@ -63,10 +68,17 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
   const [timesheetEndDate, setTimesheetEndDate] = useState<Date>(new Date());
   const [calendarApi, setCalendarApi] = useState<any>(null);
 
+  // Use provided date range or default to current month
+  const currentDateRange = dateRange || {
+    startDate: startOfMonth(new Date()),
+    endDate: endOfMonth(new Date()),
+    label: "Current Month",
+  };
+
   const currentDate = new Date();
   const year = currentDate.getFullYear();
-  const monthStart = format(startOfMonth(currentDate), "yyyy-MM-dd");
-  const monthEnd = format(endOfMonth(currentDate), "yyyy-MM-dd");
+  const periodStart = format(currentDateRange.startDate, "yyyy-MM-dd");
+  const periodEnd = format(currentDateRange.endDate, "yyyy-MM-dd");
 
   // Fetch workdays and time slots for all selected users
   // Always call hooks for up to 3 users to avoid conditional hook calls
@@ -75,13 +87,13 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
   const user3Id = selectedUsers[2]?.id || "";
 
   const user1Workdays = useWorkdays(user1Id, year).data;
-  const user1TimeSlots = useTimeSlots(user1Id, monthStart, monthEnd).data || [];
+  const user1TimeSlots = useTimeSlots(user1Id, periodStart, periodEnd).data || [];
 
   const user2Workdays = useWorkdays(user2Id, year).data;
-  const user2TimeSlots = useTimeSlots(user2Id, monthStart, monthEnd).data || [];
+  const user2TimeSlots = useTimeSlots(user2Id, periodStart, periodEnd).data || [];
 
   const user3Workdays = useWorkdays(user3Id, year).data;
-  const user3TimeSlots = useTimeSlots(user3Id, monthStart, monthEnd).data || [];
+  const user3TimeSlots = useTimeSlots(user3Id, periodStart, periodEnd).data || [];
 
   const userWorkdays = selectedUsers
     .map((user, index) => {
@@ -260,12 +272,11 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
     if (selectedUsers.length === 1) {
       // Single user - add bulk workdays directly
       const user = selectedUsers[0];
-      const monthEnd = format(endOfMonth(currentDate), "yyyy-MM-dd");
 
       addBulkWorkdaysMutation.mutate({
         userId: user.id,
-        startDate: monthStart,
-        endDate: monthEnd,
+        startDate: periodStart,
+        endDate: periodEnd,
       });
     } else if (selectedUsers.length > 1) {
       // Multiple users - show dialog to select which user
@@ -276,12 +287,10 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
 
   const handleBulkDialogConfirm = () => {
     if (bulkSelectedUserId) {
-      const monthEnd = format(endOfMonth(currentDate), "yyyy-MM-dd");
-
       addBulkWorkdaysMutation.mutate({
         userId: bulkSelectedUserId,
-        startDate: monthStart,
-        endDate: monthEnd,
+        startDate: periodStart,
+        endDate: periodEnd,
       });
     }
 
@@ -290,39 +299,68 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
   };
 
   return (
-    <Box sx={{ height: "100%" }}>
-      <Typography variant="h4" gutterBottom sx={{ fontWeight: 600, mb: 3 }}>
-        Calendar View
-      </Typography>
+    <div className={styles.container}>
+      <div className={styles.content}>
+        <div className={styles.header}>
+          <h1 className={styles.title}>Calendar View</h1>
+          <p className={styles.subtitle}>
+            Manage workdays and view time allocations across your selected date range
+          </p>
+        </div>
 
-      <Alert severity="info" sx={{ mb: 3, borderRadius: 2 }}>
-        Click on any date to add/remove a workday. Click on workday events to
-        edit allocations in the grid view.
-        <br />
-        <strong>Colors:</strong> Gray = 0% allocated, Blue = Partial, Green =
-        100%, Red = Over 100%
-      </Alert>
+        {/* Date Range Selector */}
+        {onDateRangeChange && (
+          <div className={styles.section}>
+            <div className={styles.sectionHeader}>
+              <h2 className={styles.sectionTitle}>Date Range Selection</h2>
+              <p className={styles.sectionDescription}>
+                Choose a custom date range or select from preset options to view calendar data
+              </p>
+            </div>
+            <div className={styles.sectionContent}>
+              <DateRangeSelector
+                selectedRange={currentDateRange}
+                onRangeChange={onDateRangeChange}
+              />
+            </div>
+          </div>
+        )}
 
-      <Box sx={{ mb: 3, display: "flex", justifyContent: "center" }}>
-        <Button
-          variant="contained"
-          onClick={handleBulkWorkdaysClick}
-          disabled={addBulkWorkdaysMutation.isPending}
-          sx={{ borderRadius: 2 }}
-        >
-          {addBulkWorkdaysMutation.isPending
-            ? "Adding..."
-            : "Add all workdays for period"}
-        </Button>
-      </Box>
+        <div className={`${styles.alert} ${styles.info}`}>
+          <strong>How to use:</strong> Click on any date to add/remove a workday. Click on workday events to
+          edit allocations in the timesheet view.
+          <br />
+          <strong>Color coding:</strong> Each user has a unique color. Event opacity indicates allocation percentage.
+        </div>
 
-      <Box
-        sx={{
-          height: "calc(100% - 200px)",
-          backgroundColor: "#ffffff",
-          borderRadius: 2,
-          border: "1px solid #e0e0e0",
-          overflow: "hidden",
+        <Box sx={{ mb: 3, display: "flex", justifyContent: "center" }}>
+          <button
+            className={`${styles.button} ${styles.primary}`}
+            onClick={handleBulkWorkdaysClick}
+            disabled={addBulkWorkdaysMutation.isPending}
+          >
+            {addBulkWorkdaysMutation.isPending
+              ? "Adding..."
+              : "Add all workdays for selected period"}
+          </button>
+        </Box>
+
+        <div className={styles.section}>
+          <div className={styles.sectionHeader}>
+            <h2 className={styles.sectionTitle}>Calendar</h2>
+            <p className={styles.sectionDescription}>
+              {format(currentDateRange.startDate, "MMMM dd, yyyy")} - {format(currentDateRange.endDate, "MMMM dd, yyyy")}
+              {currentDateRange.label && ` (${currentDateRange.label})`}
+            </p>
+          </div>
+          <div className={styles.sectionContent}>
+            <Box
+              sx={{
+                height: "600px",
+                backgroundColor: "#ffffff",
+                borderRadius: 2,
+                border: "1px solid #e0e0e0",
+                overflow: "hidden",
           "& .fc": {
             fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
           },
@@ -436,6 +474,11 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
           }}
           plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
           initialView="dayGridMonth"
+          initialDate={currentDateRange.startDate}
+          validRange={{
+            start: currentDateRange.startDate,
+            end: currentDateRange.endDate,
+          }}
           headerToolbar={{
             left: "prev,next today",
             center: "title",
@@ -491,7 +534,10 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
             );
           }}
         />
-      </Box>
+            </Box>
+          </div>
+        </div>
+      </div>
 
       {/* User Selection Dialog */}
       <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)}>
@@ -593,6 +639,6 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
           }
         />
       )}
-    </Box>
+    </div>
   );
 };

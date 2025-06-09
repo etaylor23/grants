@@ -5,6 +5,8 @@ import { AppLayout } from "../components/Layout/AppLayout";
 import { CalendarView } from "../components/CalendarView/CalendarView";
 import { mockUsers } from "../api/mockData";
 import { User } from "../models/types";
+import { DateRange } from "../components/DateRangeSelector";
+import { startOfMonth, endOfMonth } from "date-fns";
 
 // Helper function to create user slug from name
 const createUserSlug = (user: User): string => {
@@ -40,6 +42,11 @@ const saveSelectedUsers = (users: User[]) => {
 
 export const CalendarPage: React.FC = () => {
   const [selectedUsers, setSelectedUsers] = useState<User[]>(loadSelectedUsers);
+  const [dateRange, setDateRange] = useState<DateRange>({
+    startDate: startOfMonth(new Date()),
+    endDate: endOfMonth(new Date()),
+    label: "Current Month",
+  });
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
@@ -94,6 +101,8 @@ export const CalendarPage: React.FC = () => {
       <CalendarView
         selectedUsers={selectedUsers}
         onDateSelect={handleDateSelect}
+        dateRange={dateRange}
+        onDateRangeChange={setDateRange}
       />
     </AppLayout>
   );

@@ -4,6 +4,9 @@ import { AppLayout } from "../components/Layout/AppLayout";
 import { TimesheetGrid } from "../components/TimesheetGrid/TimesheetGrid";
 import { mockUsers } from "../api/mockData";
 import { User } from "../models/types";
+import { startOfMonth, endOfMonth } from "date-fns";
+import { DateRange, DateRangeSelector } from "../components/DateRangeSelector";
+import styles from "../components/Layout/ModernContainer.module.css";
 
 // Helper function to find user by slug
 const findUserBySlug = (slug: string): User | undefined => {
@@ -44,6 +47,11 @@ export const TimesheetPage: React.FC = () => {
   const [selectedUsers, setSelectedUsers] = useState<User[]>(() =>
     currentUser ? loadSelectedUsersForTimesheet(currentUser) : [mockUsers[0]]
   );
+  const [dateRange, setDateRange] = useState<DateRange>({
+    startDate: startOfMonth(new Date()),
+    endDate: endOfMonth(new Date()),
+    label: "Current Month",
+  });
 
   // If user not found, redirect to calendar
   if (!currentUser) {
@@ -83,7 +91,48 @@ export const TimesheetPage: React.FC = () => {
         }
       }}
     >
-      <TimesheetGrid userId={currentUser.id} />
+      <div className={styles.container}>
+        <div className={styles.content}>
+          <div className={styles.header}>
+            <h1 className={styles.title}>Timesheet - {currentUser.name}</h1>
+            <p className={styles.subtitle}>
+              Track time allocation across grants for the selected period
+            </p>
+          </div>
+
+          <div className={styles.section}>
+            <div className={styles.sectionHeader}>
+              <h2 className={styles.sectionTitle}>Date Range Selection</h2>
+              <p className={styles.sectionDescription}>
+                Choose a custom date range to view and edit timesheet data
+              </p>
+            </div>
+            <div className={styles.sectionContent}>
+              <DateRangeSelector
+                selectedRange={dateRange}
+                onRangeChange={setDateRange}
+              />
+            </div>
+          </div>
+
+          <div className={styles.section}>
+            <div className={styles.sectionHeader}>
+              <h2 className={styles.sectionTitle}>Hours Allocation</h2>
+              <p className={styles.sectionDescription}>
+                Enter hours worked on each grant for each day in the selected period
+              </p>
+            </div>
+            <div className={styles.sectionContent}>
+              <TimesheetGrid
+                userId={currentUser.id}
+                startDate={dateRange.startDate}
+                endDate={dateRange.endDate}
+                showCard={false}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
     </AppLayout>
   );
 };
