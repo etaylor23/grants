@@ -8,20 +8,13 @@ import {
   NumberCell,
 } from "@silevis/reactgrid";
 import "./TimesheetGrid.scss";
-import {
-  Box,
-  Typography,
-  Alert,
-  Snackbar,
-  Button,
-  Stack,
-} from "@mui/material";
+import { Box, Typography, Alert, Snackbar, Button, Stack } from "@mui/material";
 // IndexedDB data hooks
 import {
   useTimeSlots,
   useWorkdayHours,
   useGrants,
-  useSaveSlots
+  useSaveSlots,
 } from "../../hooks/useLocalData";
 import {
   TimeSlot,
@@ -96,7 +89,7 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({
     const lookup: Record<string, number> = {};
 
     // workdayHoursData is a Record<string, number> from IndexedDB
-    const hoursData = workdayHoursData as Record<string, number> || {};
+    const hoursData = (workdayHoursData as Record<string, number>) || {};
     Object.entries(hoursData).forEach(([date, hours]) => {
       lookup[date] = hours;
     });
@@ -113,9 +106,7 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({
 
   // Create grid structure
   const columns: Column[] = useMemo(() => {
-    const cols: Column[] = [
-      { columnId: "grant", width: 150 },
-    ];
+    const cols: Column[] = [{ columnId: "grant", width: 150 }];
 
     periodDays.forEach((day) => {
       cols.push({
@@ -137,13 +128,6 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({
       rowId: "header",
       cells: [
         { type: "header", text: "Grant" } as HeaderCell,
-        ...periodDays.map(
-          (day) =>
-            ({
-              type: "header",
-              text: formatDateOrdinal(day),
-            } as HeaderCell)
-        ),
         {
           type: "header",
           text: "Total Hours Worked on Grants in Time Period",
@@ -152,6 +136,13 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({
           type: "header",
           text: "Average Percentage in Time Period",
         } as HeaderCell,
+        ...periodDays.map(
+          (day) =>
+            ({
+              type: "header",
+              text: formatDateOrdinal(day),
+            } as HeaderCell)
+        ),
       ],
     };
 
@@ -164,7 +155,7 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({
       const normalizedTimeSlots = timeSlots.map((slot: any) => ({
         date: slot.Date,
         grantId: slot.GrantID,
-        hoursAllocated: slot.HoursAllocated
+        hoursAllocated: slot.HoursAllocated,
       }));
 
       const totalHoursWorked = calculateTotalHoursWorked(
@@ -185,9 +176,23 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({
         {
           type: "text",
           text: grantName,
-          className: "read-only-cell"
+          className: "read-only-cell",
         } as TextCell & { className: string },
       ];
+
+      // Add calculated columns at the end
+      cells.push(
+        {
+          type: "text",
+          text: `${totalHoursWorked.toFixed(1)}h`,
+          className: "read-only-cell",
+        } as TextCell & { className: string },
+        {
+          type: "text",
+          text: `${averagePercentage.toFixed(1)}%`,
+          className: "read-only-cell",
+        } as TextCell & { className: string }
+      );
 
       periodDays.forEach((day) => {
         const dateStr = format(day, "yyyy-MM-dd");
@@ -204,23 +209,9 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({
           grantId: grantId,
           maxHours: maxHours,
           nonEditable: isDisabled,
-          className: isDisabled ? "disabled-cell" : "editable-cell"
+          className: isDisabled ? "disabled-cell" : "editable-cell",
         } as NumberCell & { date: string; grantId: string; maxHours: number; nonEditable?: boolean; className: string });
       });
-
-      // Add calculated columns at the end
-      cells.push(
-        {
-          type: "text",
-          text: `${totalHoursWorked.toFixed(1)}h`,
-          className: "read-only-cell"
-        } as TextCell & { className: string },
-        {
-          type: "text",
-          text: `${averagePercentage.toFixed(1)}%`,
-          className: "read-only-cell"
-        } as TextCell & { className: string }
-      );
 
       return {
         rowId: grantId,
@@ -244,11 +235,19 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({
             value: availableHours,
             date: dateStr,
             nonEditable: isDisabled,
-            className: isDisabled ? "disabled-cell" : "editable-cell"
-          } as NumberCell & { date: string; nonEditable?: boolean; className: string };
+            className: isDisabled ? "disabled-cell" : "editable-cell",
+          } as NumberCell & {
+            date: string;
+            nonEditable?: boolean;
+            className: string;
+          };
         }),
-        { type: "text", text: "", className: "read-only-cell" } as TextCell & { className: string }, // Empty cells for calculated columns
-        { type: "text", text: "", className: "read-only-cell" } as TextCell & { className: string },
+        { type: "text", text: "", className: "read-only-cell" } as TextCell & {
+          className: string;
+        }, // Empty cells for calculated columns
+        { type: "text", text: "", className: "read-only-cell" } as TextCell & {
+          className: string;
+        },
       ],
     };
 
@@ -276,8 +275,12 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({
               : undefined,
           } as TextCell & { style?: any; className: string };
         }),
-        { type: "text", text: "", className: "read-only-cell" } as TextCell & { className: string }, // Empty cells for calculated columns
-        { type: "text", text: "", className: "read-only-cell" } as TextCell & { className: string },
+        { type: "text", text: "", className: "read-only-cell" } as TextCell & {
+          className: string;
+        }, // Empty cells for calculated columns
+        { type: "text", text: "", className: "read-only-cell" } as TextCell & {
+          className: string;
+        },
       ],
     };
 
@@ -399,7 +402,7 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({
             const existingHours = null; // Simplified for now
 
             // Simplified workday hours handling for now
-            console.log('Workday hours change:', newValue);
+            console.log("Workday hours change:", newValue);
           }
           // Handle time slot changes (from grant rows)
           else if (cell.grantId) {
@@ -463,39 +466,39 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({
       try {
         // Use IndexedDB save functionality
         const operations: Array<{
-          type: 'put' | 'delete';
+          type: "put" | "delete";
           timeSlot?: any;
           date?: string;
           grantId?: string;
         }> = [];
 
         // Convert batch operations to IndexedDB operations
-        timeSlotBatch.create?.forEach(slot => {
+        timeSlotBatch.create?.forEach((slot) => {
           operations.push({
-            type: 'put',
-            timeSlot: slot
+            type: "put",
+            timeSlot: slot,
           });
         });
 
-        timeSlotBatch.update?.forEach(slot => {
+        timeSlotBatch.update?.forEach((slot) => {
           operations.push({
-            type: 'put',
-            timeSlot: slot
+            type: "put",
+            timeSlot: slot,
           });
         });
 
-        timeSlotBatch.delete?.forEach(deleteInfo => {
+        timeSlotBatch.delete?.forEach((deleteInfo) => {
           operations.push({
-            type: 'delete',
+            type: "delete",
             date: deleteInfo.date,
-            grantId: deleteInfo.grantId
+            grantId: deleteInfo.grantId,
           });
         });
 
         if (operations.length > 0) {
           await saveSlotsMutation.mutateAsync({
             userId,
-            operations
+            operations,
           });
         }
 
@@ -505,13 +508,7 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({
         setError(apiError.message || "Failed to update timesheet");
       }
     },
-    [
-      timeSlots,
-      workdayHoursLookup,
-      saveSlotsMutation,
-      refetch,
-      userId,
-    ]
+    [timeSlots, workdayHoursLookup, saveSlotsMutation, refetch, userId]
   );
 
   const handleCloseError = () => {
@@ -585,7 +582,7 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({
 
       <Box className="timesheet-grid">
         <ReactGrid
-          stickyLeftColumns={1}
+          stickyLeftColumns={3}
           rows={rows}
           columns={columns}
           onCellsChanged={handleChanges}
