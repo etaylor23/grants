@@ -187,12 +187,21 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({
       ],
     };
 
-    const grantRows: Row[] = grants.map((grant) => {
+    const grantRows: Row[] = grants.map((grant: any) => {
       // Calculate total hours worked for this grant
       const periodDates = periodDays.map((day) => format(day, "yyyy-MM-dd"));
+      const grantId = isLocal ? grant.PK : grant.id;
+      const grantName = isLocal ? grant.Title : grant.name;
+      // Transform timeSlots to match the expected format for calculateTotalHoursWorked
+      const normalizedTimeSlots = timeSlots.map((slot: any) => ({
+        date: isLocal ? slot.Date : slot.date,
+        grantId: isLocal ? slot.GrantID : slot.grantId,
+        hoursAllocated: isLocal ? slot.HoursAllocated : slot.hoursAllocated
+      }));
+
       const totalHoursWorked = calculateTotalHoursWorked(
-        timeSlots,
-        grant.id,
+        normalizedTimeSlots,
+        grantId,
         periodDates
       );
       const totalAvailableHours = calculateTotalAvailableHours(
@@ -207,7 +216,7 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({
       const cells: (TextCell | NumberCell)[] = [
         {
           type: "text",
-          text: grant.name,
+          text: grantName,
           className: "read-only-cell"
         } as TextCell & { className: string },
       ];
@@ -218,7 +227,7 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({
           (s: any) => {
             const slotDate = isLocal ? s.Date : s.date;
             const slotGrantId = isLocal ? s.GrantID : s.grantId;
-            return slotDate === dateStr && slotGrantId === (isLocal ? (grant as any).PK : (grant as any).id);
+            return slotDate === dateStr && slotGrantId === grantId;
           }
         );
         const isDisabled = disabledDates.includes(dateStr);
@@ -228,7 +237,7 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({
           type: "number",
           value: (slot as any)?.HoursAllocated || (slot as any)?.hoursAllocated || 0,
           date: dateStr,
-          grantId: isLocal ? (grant as any).PK : (grant as any).id,
+          grantId: grantId,
           maxHours: maxHours,
           nonEditable: isDisabled,
           className: isDisabled ? "disabled-cell" : "editable-cell"
@@ -250,7 +259,7 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({
       );
 
       return {
-        rowId: grant.id,
+        rowId: grantId,
         cells,
       };
     });
@@ -286,9 +295,12 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({
         { type: "header", text: "Total Hours Used" } as HeaderCell,
         ...periodDays.map((day) => {
           const dateStr = format(day, "yyyy-MM-dd");
-          const daySlots = timeSlots.filter((s) => s.date === dateStr);
+          const daySlots = timeSlots.filter((s: any) => {
+            const slotDate = isLocal ? s.Date : s.date;
+            return slotDate === dateStr;
+          });
           const totalHours = daySlots.reduce(
-            (sum, slot) => sum + (slot.hoursAllocated || 0),
+            (sum, slot: any) => sum + ((isLocal ? slot.HoursAllocated : slot.hoursAllocated) || 0),
             0
           );
           const availableHours = workdayHoursLookup[dateStr] || 0;
@@ -369,8 +381,9 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({
       return;
 
     // Apply to all grant rows (excluding header and total rows)
-    mockGrants.forEach((grant) => {
-      const targetRow = rows.find((row) => row.rowId === grant.id);
+    grants.forEach((grant: any) => {
+      const grantId = isLocal ? grant.PK : grant.id;
+      const targetRow = rows.find((row) => row.rowId === grantId);
       if (!targetRow) return;
 
       const cellIndex = columns.findIndex(
@@ -381,7 +394,7 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({
       const cell = targetRow.cells[cellIndex];
       if (cell.type === "number") {
         changes.push({
-          rowId: grant.id,
+          rowId: grantId,
           columnId: String(columnId),
           newCell: {
             ...cell,
