@@ -1,62 +1,15 @@
-// Simplified hooks for build compatibility
+// IndexedDB data hooks for local storage
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-
-// Mock data for testing
-const mockIndividuals = [
-  {
-    PK: "U-12345",
-    FirstName: "Ellis",
-    LastName: "Taylor",
-    AnnualGross: 48000,
-    Pension: 1450,
-    NationalIns: 5000
-  },
-  {
-    PK: "U-67890",
-    FirstName: "Sarah",
-    LastName: "Johnson",
-    AnnualGross: 52000,
-    Pension: 1560,
-    NationalIns: 5200
-  },
-  {
-    PK: "U-11111",
-    FirstName: "Michael",
-    LastName: "Chen",
-    AnnualGross: 45000,
-    Pension: 1350,
-    NationalIns: 4800
-  }
-];
-
-const mockGrants = [
-  {
-    PK: "G-001",
-    Title: "Digital Health Innovation Project",
-    StartDate: "2024-10-01",
-    EndDate: "2025-09-30",
-    ManagerUserID: "U-12345"
-  },
-  {
-    PK: "G-002",
-    Title: "AI Research Initiative",
-    StartDate: "2024-12-01",
-    EndDate: "2025-11-30",
-    ManagerUserID: "U-67890"
-  },
-  {
-    PK: "G-003",
-    Title: "Sustainable Technology Development",
-    StartDate: "2025-01-01",
-    EndDate: "2025-12-31",
-    ManagerUserID: "U-11111"
-  }
-];
 
 export const useIndividuals = () => {
   return useQuery({
     queryKey: ['individuals'],
-    queryFn: async () => mockIndividuals,
+    queryFn: async () => {
+      const { db } = await import('../db/schema');
+      const individuals = await db.individuals.toArray();
+      console.log('Loaded individuals from IndexedDB:', individuals);
+      return individuals;
+    },
     staleTime: 5 * 60 * 1000,
   });
 };
@@ -64,7 +17,12 @@ export const useIndividuals = () => {
 export const useGrants = () => {
   return useQuery({
     queryKey: ['grants'],
-    queryFn: async () => mockGrants,
+    queryFn: async () => {
+      const { db } = await import('../db/schema');
+      const grants = await db.grants.toArray();
+      console.log('Loaded grants from IndexedDB:', grants);
+      return grants;
+    },
     staleTime: 5 * 60 * 1000,
   });
 };
@@ -72,8 +30,14 @@ export const useGrants = () => {
 export const useWorkdayHours = (userId: string, year: number) => {
   return useQuery({
     queryKey: ['workdayHours', userId, year],
-    queryFn: async () => ({}),
-    enabled: false,
+    queryFn: async () => {
+      const { db, generateWorkdayHoursKey } = await import('../db/schema');
+
+      const result = await db.workdayHours.get([userId, generateWorkdayHoursKey(userId, year)]);
+      return result?.Hours || {};
+    },
+    enabled: !!userId && !!year,
+    staleTime: 2 * 60 * 1000, // 2 minutes
   });
 };
 

@@ -25,6 +25,7 @@ import {
   CalendarToday as CalendarIcon,
   GridOn as GridIcon,
   Person as PersonIcon,
+  Add as AddIcon,
 } from "@mui/icons-material";
 import { mockUsers } from "../../api/mockData";
 import { User, ViewMode } from "../../models/types";
@@ -110,7 +111,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
               <Button
                 variant="outlined"
                 size="small"
-                startIcon={<GridIcon />}
+                startIcon={<AddIcon />}
                 onClick={() => setCreateGrantModalOpen(true)}
                 sx={{
                   color: 'white',

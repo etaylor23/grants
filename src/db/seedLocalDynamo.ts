@@ -245,16 +245,38 @@ export const isDatabaseEmpty = async (): Promise<boolean> => {
 // Auto-seed on first load
 export const initializeDatabase = async (): Promise<void> => {
   try {
+    console.log('Initializing IndexedDB database...');
+
+    // Ensure database is open
+    await db.open();
+    console.log('Database opened successfully');
+
     const isEmpty = await isDatabaseEmpty();
+    console.log('Database empty check:', isEmpty);
+
     if (isEmpty) {
       console.log('Database is empty, auto-seeding...');
       await seedLocalDynamo();
     } else {
       console.log('Database already contains data, skipping auto-seed');
+      // Log current counts for debugging
+      const counts = {
+        individuals: await db.individuals.count(),
+        grants: await db.grants.count(),
+        workdays: await db.workdays.count(),
+        workdayHours: await db.workdayHours.count(),
+        timeslots: await db.timeslots.count(),
+      };
+      console.log('Current database counts:', counts);
     }
   } catch (error) {
     console.error('Database initialization failed:', error);
     // Try to seed anyway
-    await seedLocalDynamo();
+    console.log('Attempting to seed database anyway...');
+    try {
+      await seedLocalDynamo();
+    } catch (seedError) {
+      console.error('Seeding also failed:', seedError);
+    }
   }
 };

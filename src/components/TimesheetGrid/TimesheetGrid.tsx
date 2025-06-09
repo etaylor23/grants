@@ -16,13 +16,7 @@ import {
   Button,
   Stack,
 } from "@mui/material";
-import {
-  useTimeSlots as useLegacyTimeSlots,
-  useBatchUpdateTimeSlots,
-  useWorkdayHours as useLegacyWorkdayHours,
-  useBatchUpdateWorkdayHours,
-} from "../../api/hooks";
-import { mockGrants } from "../../api/mockData";
+// Legacy imports removed - using IndexedDB only
 import {
   useTimeSlots as useLocalTimeSlots,
   useWorkdayHours as useLocalWorkdayHours,
@@ -78,60 +72,39 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({
   const periodDays = eachDayOfInterval({ start: periodStart, end: periodEnd });
   const year = periodStart.getFullYear();
 
-  // Use appropriate data hooks based on backend
+  // Use IndexedDB data hooks
   const isLocal = isDexieBackend();
 
-  // Time slots
-  const legacyTimeSlotsQuery = useLegacyTimeSlots(
-    userId,
-    format(periodStart, "yyyy-MM-dd"),
-    format(periodEnd, "yyyy-MM-dd")
-  );
-  const localTimeSlotsQuery = useLocalTimeSlots(
+  // Time slots from IndexedDB
+  const timeSlotsQuery = useLocalTimeSlots(
     userId,
     format(periodStart, "yyyy-MM-dd"),
     format(periodEnd, "yyyy-MM-dd")
   );
 
-  const timeSlots: any[] = isLocal ? (localTimeSlotsQuery.data || []) : (legacyTimeSlotsQuery.data || []);
-  const refetch = isLocal ? localTimeSlotsQuery.refetch : legacyTimeSlotsQuery.refetch;
+  const timeSlots: any[] = timeSlotsQuery.data || [];
+  const refetch = timeSlotsQuery.refetch;
 
-  // Workday hours
-  const legacyWorkdayHoursQuery = useLegacyWorkdayHours(
-    userId,
-    format(periodStart, "yyyy-MM-dd"),
-    format(periodEnd, "yyyy-MM-dd")
-  );
-  const localWorkdayHoursQuery = useLocalWorkdayHours(userId, year);
-
-  const workdayHoursData = isLocal ? localWorkdayHoursQuery.data : legacyWorkdayHoursQuery.data;
+  // Workday hours from IndexedDB
+  const workdayHoursQuery = useLocalWorkdayHours(userId, year);
+  const workdayHoursData = workdayHoursQuery.data;
 
   // Grants
   const { data: localGrants = [] } = useGrants();
-  const grants = isLocal ? localGrants : mockGrants;
+  const grants = localGrants; // Always use IndexedDB grants since we're in Dexie mode
 
   // Mutations
-  const batchUpdateMutation = useBatchUpdateTimeSlots();
-  const batchUpdateWorkdayHoursMutation = useBatchUpdateWorkdayHours();
   const saveSlotsMutation = useSaveSlots();
 
   // Create workday hours lookup for easy access
   const workdayHoursLookup = useMemo(() => {
     const lookup: Record<string, number> = {};
 
-    if (isLocal) {
-      // For local data, workdayHoursData is a Record<string, number>
-      const hoursData = workdayHoursData as Record<string, number> || {};
-      Object.entries(hoursData).forEach(([date, hours]) => {
-        lookup[date] = hours;
-      });
-    } else {
-      // For legacy data, workdayHoursData is an array
-      const hoursArray = workdayHoursData as Array<{ date: string; availableHours: number }> || [];
-      hoursArray.forEach((wh) => {
-        lookup[wh.date] = wh.availableHours;
-      });
-    }
+    // For IndexedDB data, workdayHoursData is a Record<string, number>
+    const hoursData = workdayHoursData as Record<string, number> || {};
+    Object.entries(hoursData).forEach(([date, hours]) => {
+      lookup[date] = hours;
+    });
 
     // Fill in defaults for dates without explicit hours
     periodDays.forEach((day) => {
@@ -141,7 +114,7 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({
       }
     });
     return lookup;
-  }, [workdayHoursData, periodDays, disabledDates, isLocal]);
+  }, [workdayHoursData, periodDays, disabledDates]);
 
   // Create grid structure
   const columns: Column[] = useMemo(() => {
@@ -190,13 +163,13 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({
     const grantRows: Row[] = grants.map((grant: any) => {
       // Calculate total hours worked for this grant
       const periodDates = periodDays.map((day) => format(day, "yyyy-MM-dd"));
-      const grantId = isLocal ? grant.PK : grant.id;
-      const grantName = isLocal ? grant.Title : grant.name;
+      const grantId = grant.PK; // IndexedDB format
+      const grantName = grant.Title; // IndexedDB format
       // Transform timeSlots to match the expected format for calculateTotalHoursWorked
       const normalizedTimeSlots = timeSlots.map((slot: any) => ({
-        date: isLocal ? slot.Date : slot.date,
-        grantId: isLocal ? slot.GrantID : slot.grantId,
-        hoursAllocated: isLocal ? slot.HoursAllocated : slot.hoursAllocated
+        date: slot.Date,
+        grantId: slot.GrantID,
+        hoursAllocated: slot.HoursAllocated
       }));
 
       const totalHoursWorked = calculateTotalHoursWorked(
@@ -224,18 +197,14 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({
       periodDays.forEach((day) => {
         const dateStr = format(day, "yyyy-MM-dd");
         const slot = timeSlots.find(
-          (s: any) => {
-            const slotDate = isLocal ? s.Date : s.date;
-            const slotGrantId = isLocal ? s.GrantID : s.grantId;
-            return slotDate === dateStr && slotGrantId === grantId;
-          }
+          (s: any) => s.Date === dateStr && s.GrantID === grantId
         );
         const isDisabled = disabledDates.includes(dateStr);
         const maxHours = workdayHoursLookup[dateStr] || 0;
 
         cells.push({
           type: "number",
-          value: (slot as any)?.HoursAllocated || (slot as any)?.hoursAllocated || 0,
+          value: slot?.HoursAllocated || 0,
           date: dateStr,
           grantId: grantId,
           maxHours: maxHours,
@@ -295,12 +264,9 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({
         { type: "header", text: "Total Hours Used" } as HeaderCell,
         ...periodDays.map((day) => {
           const dateStr = format(day, "yyyy-MM-dd");
-          const daySlots = timeSlots.filter((s: any) => {
-            const slotDate = isLocal ? s.Date : s.date;
-            return slotDate === dateStr;
-          });
+          const daySlots = timeSlots.filter((s: any) => s.Date === dateStr);
           const totalHours = daySlots.reduce(
-            (sum, slot: any) => sum + ((isLocal ? slot.HoursAllocated : slot.hoursAllocated) || 0),
+            (sum, slot: any) => sum + (slot.HoursAllocated || 0),
             0
           );
           const availableHours = workdayHoursLookup[dateStr] || 0;
@@ -382,7 +348,7 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({
 
     // Apply to all grant rows (excluding header and total rows)
     grants.forEach((grant: any) => {
-      const grantId = isLocal ? grant.PK : grant.id;
+      const grantId = grant.PK; // IndexedDB format
       const targetRow = rows.find((row) => row.rowId === grantId);
       if (!targetRow) return;
 
@@ -450,14 +416,10 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({
 
             // Calculate current total hours for this day (excluding the current grant)
             const daySlots = timeSlots.filter(
-              (s: any) => {
-                const slotDate = isLocal ? s.Date : s.date;
-                const slotGrantId = isLocal ? s.GrantID : s.grantId;
-                return slotDate === cell.date && slotGrantId !== cell.grantId;
-              }
+              (s: any) => s.Date === cell.date && s.GrantID !== cell.grantId
             );
             const currentTotalHours = daySlots.reduce(
-              (sum, slot: any) => sum + ((isLocal ? slot.HoursAllocated : slot.hoursAllocated) || 0),
+              (sum, slot: any) => sum + (slot.HoursAllocated || 0),
               0
             );
 
@@ -471,11 +433,7 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({
             }
 
             const existingSlot = timeSlots.find(
-              (s: any) => {
-                const slotDate = isLocal ? s.Date : s.date;
-                const slotGrantId = isLocal ? s.GrantID : s.grantId;
-                return slotDate === cell.date && slotGrantId === cell.grantId;
-              }
+              (s: any) => s.Date === cell.date && s.GrantID === cell.grantId
             );
 
             if (newValue === 0 && existingSlot) {
@@ -508,67 +466,42 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({
       }
 
       try {
-        if (isLocal) {
-          // Use IndexedDB save functionality
-          const operations: Array<{
-            type: 'put' | 'delete';
-            timeSlot?: any;
-            date?: string;
-            grantId?: string;
-          }> = [];
+        // Use IndexedDB save functionality
+        const operations: Array<{
+          type: 'put' | 'delete';
+          timeSlot?: any;
+          date?: string;
+          grantId?: string;
+        }> = [];
 
-          // Convert batch operations to IndexedDB operations
-          timeSlotBatch.create?.forEach(slot => {
-            operations.push({
-              type: 'put',
-              timeSlot: slot
-            });
+        // Convert batch operations to IndexedDB operations
+        timeSlotBatch.create?.forEach(slot => {
+          operations.push({
+            type: 'put',
+            timeSlot: slot
           });
+        });
 
-          timeSlotBatch.update?.forEach(slot => {
-            operations.push({
-              type: 'put',
-              timeSlot: slot
-            });
+        timeSlotBatch.update?.forEach(slot => {
+          operations.push({
+            type: 'put',
+            timeSlot: slot
           });
+        });
 
-          timeSlotBatch.delete?.forEach(deleteInfo => {
-            operations.push({
-              type: 'delete',
-              date: deleteInfo.date,
-              grantId: deleteInfo.grantId
-            });
+        timeSlotBatch.delete?.forEach(deleteInfo => {
+          operations.push({
+            type: 'delete',
+            date: deleteInfo.date,
+            grantId: deleteInfo.grantId
           });
+        });
 
-          if (operations.length > 0) {
-            await saveSlotsMutation.mutateAsync({
-              userId,
-              operations
-            });
-          }
-        } else {
-          // Use legacy batch updates
-          const promises = [];
-
-          if (
-            timeSlotBatch.create?.length ||
-            timeSlotBatch.update?.length ||
-            timeSlotBatch.delete?.length
-          ) {
-            promises.push(batchUpdateMutation.mutateAsync(timeSlotBatch));
-          }
-
-          if (
-            workdayHoursBatch.create?.length ||
-            workdayHoursBatch.update?.length ||
-            workdayHoursBatch.delete?.length
-          ) {
-            promises.push(
-              batchUpdateWorkdayHoursMutation.mutateAsync(workdayHoursBatch)
-            );
-          }
-
-          await Promise.all(promises);
+        if (operations.length > 0) {
+          await saveSlotsMutation.mutateAsync({
+            userId,
+            operations
+          });
         }
 
         await refetch();
@@ -580,12 +513,9 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({
     [
       timeSlots,
       workdayHoursLookup,
-      batchUpdateMutation,
-      batchUpdateWorkdayHoursMutation,
       saveSlotsMutation,
       refetch,
       userId,
-      isLocal,
     ]
   );
 
