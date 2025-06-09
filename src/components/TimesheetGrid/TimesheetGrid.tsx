@@ -93,7 +93,7 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({
     format(periodEnd, "yyyy-MM-dd")
   );
 
-  const timeSlots = isLocal ? (localTimeSlotsQuery.data || []) : (legacyTimeSlotsQuery.data || []);
+  const timeSlots: any[] = isLocal ? (localTimeSlotsQuery.data || []) : (legacyTimeSlotsQuery.data || []);
   const refetch = isLocal ? localTimeSlotsQuery.refetch : legacyTimeSlotsQuery.refetch;
 
   // Workday hours
@@ -508,28 +508,69 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({
       }
 
       try {
-        // Execute both batch updates
-        const promises = [];
+        if (isLocal) {
+          // Use IndexedDB save functionality
+          const operations: Array<{
+            type: 'put' | 'delete';
+            timeSlot?: any;
+            date?: string;
+            grantId?: string;
+          }> = [];
 
-        if (
-          timeSlotBatch.create?.length ||
-          timeSlotBatch.update?.length ||
-          timeSlotBatch.delete?.length
-        ) {
-          promises.push(batchUpdateMutation.mutateAsync(timeSlotBatch));
+          // Convert batch operations to IndexedDB operations
+          timeSlotBatch.create?.forEach(slot => {
+            operations.push({
+              type: 'put',
+              timeSlot: slot
+            });
+          });
+
+          timeSlotBatch.update?.forEach(slot => {
+            operations.push({
+              type: 'put',
+              timeSlot: slot
+            });
+          });
+
+          timeSlotBatch.delete?.forEach(deleteInfo => {
+            operations.push({
+              type: 'delete',
+              date: deleteInfo.date,
+              grantId: deleteInfo.grantId
+            });
+          });
+
+          if (operations.length > 0) {
+            await saveSlotsMutation.mutateAsync({
+              userId,
+              operations
+            });
+          }
+        } else {
+          // Use legacy batch updates
+          const promises = [];
+
+          if (
+            timeSlotBatch.create?.length ||
+            timeSlotBatch.update?.length ||
+            timeSlotBatch.delete?.length
+          ) {
+            promises.push(batchUpdateMutation.mutateAsync(timeSlotBatch));
+          }
+
+          if (
+            workdayHoursBatch.create?.length ||
+            workdayHoursBatch.update?.length ||
+            workdayHoursBatch.delete?.length
+          ) {
+            promises.push(
+              batchUpdateWorkdayHoursMutation.mutateAsync(workdayHoursBatch)
+            );
+          }
+
+          await Promise.all(promises);
         }
 
-        if (
-          workdayHoursBatch.create?.length ||
-          workdayHoursBatch.update?.length ||
-          workdayHoursBatch.delete?.length
-        ) {
-          promises.push(
-            batchUpdateWorkdayHoursMutation.mutateAsync(workdayHoursBatch)
-          );
-        }
-
-        await Promise.all(promises);
         await refetch();
       } catch (err: any) {
         const apiError = err as ApiError;
@@ -541,6 +582,7 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({
       workdayHoursLookup,
       batchUpdateMutation,
       batchUpdateWorkdayHoursMutation,
+      saveSlotsMutation,
       refetch,
       userId,
       isLocal,

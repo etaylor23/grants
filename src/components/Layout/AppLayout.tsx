@@ -18,6 +18,7 @@ import {
   MenuItem,
   Chip,
   Stack,
+  Button,
 } from "@mui/material";
 import {
   Menu as MenuIcon,
@@ -30,6 +31,7 @@ import { User, ViewMode } from "../../models/types";
 import { generateUserColor } from "../../utils/colors";
 import { UserPicker } from "../UserPicker";
 import { Individual } from "../../db/schema";
+import { CreateGrantModal } from "../CreateGrantModal";
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -51,6 +53,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
   onUserChange,
 }) => {
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [createGrantModalOpen, setCreateGrantModalOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -98,10 +101,29 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
 
           {/* New User Picker for IndexedDB users */}
           {onUserChange && (
-            <UserPicker
-              selectedUserId={selectedUserId || null}
-              onUserChange={onUserChange}
-            />
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <UserPicker
+                selectedUserId={selectedUserId || null}
+                onUserChange={onUserChange}
+              />
+
+              <Button
+                variant="outlined"
+                size="small"
+                startIcon={<GridIcon />}
+                onClick={() => setCreateGrantModalOpen(true)}
+                sx={{
+                  color: 'white',
+                  borderColor: 'rgba(255, 255, 255, 0.5)',
+                  '&:hover': {
+                    borderColor: 'white',
+                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                  },
+                }}
+              >
+                Create Grant
+              </Button>
+            </Box>
           )}
 
           {/* Legacy user selection for backward compatibility */}
@@ -264,6 +286,16 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
       >
         {children}
       </Box>
+
+      {/* Create Grant Modal */}
+      <CreateGrantModal
+        open={createGrantModalOpen}
+        onClose={() => setCreateGrantModalOpen(false)}
+        onGrantCreated={() => {
+          setCreateGrantModalOpen(false);
+          // Could add notification here
+        }}
+      />
     </Box>
   );
 };
