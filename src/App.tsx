@@ -9,10 +9,7 @@ import {
   Navigate,
 } from "react-router-dom";
 import { theme } from "./theme";
-import { Dashboard } from "./pages/Dashboard";
-import { CalendarPage } from "./pages/CalendarPage";
-import { TimesheetPage } from "./pages/TimesheetPage";
-import { GrantPage } from "./pages/GrantPage";
+// Legacy pages removed - using IndexedDB only
 import { LocalCalendarPage } from "./pages/LocalCalendarPage";
 import { LocalTimesheetPage } from "./pages/LocalTimesheetPage";
 import { initializeDatabase } from "./db/index";
@@ -65,7 +62,7 @@ function App() {
             Initializing Database...
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            {isDexieBackend() ? 'Setting up local IndexedDB' : 'Connecting to DynamoDB'}
+            Setting up local IndexedDB database...
           </Typography>
         </Box>
       </ThemeProvider>
@@ -78,42 +75,15 @@ function App() {
         <CssBaseline />
         <Router>
           <Routes>
-            {/* Default route - redirect based on backend */}
-            <Route
-              path="/"
-              element={
-                <Navigate
-                  to={isDexieBackend() ? "/local-calendar" : "/calendar"}
-                  replace
-                />
-              }
-            />
+            {/* Default route */}
+            <Route path="/" element={<Navigate to="/calendar" replace />} />
 
             {/* IndexedDB routes */}
-            {isDexieBackend() && (
-              <>
-                <Route path="/local-calendar" element={<LocalCalendarPage />} />
-                <Route path="/local-timesheet/:userSlug" element={<LocalTimesheetPage />} />
-              </>
-            )}
-
-            {/* Legacy mock data routes */}
-            <Route path="/calendar" element={<CalendarPage />} />
-            <Route path="/timesheet/:userSlug" element={<TimesheetPage />} />
-            <Route path="/grants" element={<GrantPage />} />
-            <Route path="/grants/:grantSlug" element={<GrantPage />} />
-            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/calendar" element={<LocalCalendarPage />} />
+            <Route path="/timesheet/:userSlug" element={<LocalTimesheetPage />} />
 
             {/* Fallback redirect */}
-            <Route
-              path="*"
-              element={
-                <Navigate
-                  to={isDexieBackend() ? "/local-calendar" : "/calendar"}
-                  replace
-                />
-              }
-            />
+            <Route path="*" element={<Navigate to="/calendar" replace />} />
           </Routes>
         </Router>
 

@@ -16,8 +16,6 @@ import {
   FormControl,
   Select,
   MenuItem,
-  Chip,
-  Stack,
   Button,
 } from "@mui/material";
 import {
@@ -27,29 +25,20 @@ import {
   Person as PersonIcon,
   Add as AddIcon,
 } from "@mui/icons-material";
-import { mockUsers } from "../../api/mockData";
-import { User, ViewMode } from "../../models/types";
-import { generateUserColor } from "../../utils/colors";
+// IndexedDB only - no legacy dependencies
+import { ViewMode } from "../../models/types";
 import { UserPicker } from "../UserPicker";
 import { Individual } from "../../db/schema";
 import { CreateGrantModal } from "../CreateGrantModal";
 
 interface AppLayoutProps {
   children: React.ReactNode;
-  selectedUsers: User[];
-  onUsersChange: (users: User[]) => void;
-  viewMode: ViewMode;
-  onViewModeChange: (mode: ViewMode) => void;
   selectedUserId?: string | null;
   onUserChange?: (userId: string, user: Individual) => void;
 }
 
 export const AppLayout: React.FC<AppLayoutProps> = ({
   children,
-  selectedUsers,
-  onUsersChange,
-  viewMode,
-  onViewModeChange,
   selectedUserId,
   onUserChange,
 }) => {
@@ -62,21 +51,9 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
     setDrawerOpen(!drawerOpen);
   };
 
-  const handleViewModeChange = (mode: ViewMode) => {
-    if (mode === "calendar") {
-      navigate("/calendar");
-    } else if (mode === "grid") {
-      // Navigate to the first selected user's timesheet
-      if (selectedUsers.length > 0) {
-        const userSlug = selectedUsers[0].name
-          .toLowerCase()
-          .replace(/\s+/g, "-");
-        navigate(`/timesheet/${userSlug}`);
-      }
-    } else if (mode === "grant") {
-      navigate("/grants");
-    }
-    onViewModeChange(mode);
+  // Simplified navigation for IndexedDB mode
+  const handleNavigation = (path: string) => {
+    navigate(path);
     setDrawerOpen(false);
   };
 
@@ -100,7 +77,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
             Grant & Vacation Tracker
           </Typography>
 
-          {/* New User Picker for IndexedDB users */}
+          {/* User Picker and Create Grant Button */}
           {onUserChange && (
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
               <UserPicker
@@ -126,78 +103,6 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
               </Button>
             </Box>
           )}
-
-          {/* Legacy user selection for backward compatibility */}
-          {!onUserChange && (
-            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-              <Typography variant="body2" sx={{ color: "white", mr: 1 }}>
-                Users:
-              </Typography>
-              <Stack direction="row" spacing={1}>
-                {selectedUsers.map((user) => (
-                  <Chip
-                    key={user.id}
-                    label={user.name}
-                    size="small"
-                    sx={{
-                      backgroundColor: generateUserColor(user.name),
-                      color: "white",
-                      "& .MuiChip-deleteIcon": {
-                        color: "white",
-                      },
-                    }}
-                    onDelete={() => {
-                      const newUsers = selectedUsers.filter(
-                        (u) => u.id !== user.id
-                      );
-                      onUsersChange(newUsers);
-                    }}
-                  />
-                ))}
-                {selectedUsers.length < mockUsers.length && (
-                  <FormControl size="small" sx={{ minWidth: 100 }}>
-                    <Select
-                      value=""
-                      onChange={(e) => {
-                        const user = mockUsers.find(
-                          (u) => u.id === e.target.value
-                        );
-                        if (
-                          user &&
-                          !selectedUsers.find((u) => u.id === user.id)
-                        ) {
-                          onUsersChange([...selectedUsers, user]);
-                        }
-                      }}
-                      displayEmpty
-                      sx={{
-                        color: "white",
-                        "& .MuiOutlinedInput-notchedOutline": {
-                          borderColor: "rgba(255, 255, 255, 0.23)",
-                        },
-                        "& .MuiSvgIcon-root": {
-                          color: "white",
-                        },
-                      }}
-                    >
-                      <MenuItem value="" disabled>
-                        Add User
-                      </MenuItem>
-                      {mockUsers
-                        .filter(
-                          (user) => !selectedUsers.find((u) => u.id === user.id)
-                        )
-                        .map((user) => (
-                          <MenuItem key={user.id} value={user.id}>
-                            {user.name}
-                          </MenuItem>
-                        ))}
-                    </Select>
-                  </FormControl>
-                )}
-              </Stack>
-            </Box>
-          )}
         </Toolbar>
       </AppBar>
 
@@ -221,24 +126,12 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
             <ListItem disablePadding>
               <ListItemButton
                 selected={location.pathname === "/calendar"}
-                onClick={() => handleViewModeChange("calendar")}
+                onClick={() => handleNavigation("/calendar")}
               >
                 <ListItemIcon>
                   <CalendarIcon />
                 </ListItemIcon>
                 <ListItemText primary="Calendar View" />
-              </ListItemButton>
-            </ListItem>
-
-            <ListItem disablePadding>
-              <ListItemButton
-                selected={location.pathname.startsWith("/grants")}
-                onClick={() => handleViewModeChange("grant")}
-              >
-                <ListItemIcon>
-                  <GridIcon />
-                </ListItemIcon>
-                <ListItemText primary="Grant View" />
               </ListItemButton>
             </ListItem>
           </List>
@@ -251,26 +144,10 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
                 <PersonIcon />
               </ListItemIcon>
               <ListItemText
-                primary="Selected Users"
-                secondary={`${selectedUsers.length} user${
-                  selectedUsers.length !== 1 ? "s" : ""
-                } selected`}
+                primary="IndexedDB Mode"
+                secondary="Using local database"
               />
             </ListItem>
-            {selectedUsers.map((user) => (
-              <ListItem key={user.id} sx={{ pl: 4 }}>
-                <Box
-                  sx={{
-                    width: 12,
-                    height: 12,
-                    borderRadius: "50%",
-                    backgroundColor: generateUserColor(user.name),
-                    mr: 2,
-                  }}
-                />
-                <ListItemText primary={user.name} />
-              </ListItem>
-            ))}
           </List>
         </Box>
       </Drawer>

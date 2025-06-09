@@ -65,10 +65,6 @@ export const LocalTimesheetPage: React.FC = () => {
   if (!selectedUser) {
     return (
       <AppLayout
-        selectedUsers={[]}
-        onUsersChange={() => {}}
-        viewMode="grid"
-        onViewModeChange={() => {}}
         selectedUserId={selectedUserId}
         onUserChange={handleUserChange}
       >
@@ -84,23 +80,8 @@ export const LocalTimesheetPage: React.FC = () => {
     );
   }
 
-  // Convert Individual to User format for legacy compatibility
-  const selectedUsers = [{
-    id: selectedUser.PK,
-    name: `${selectedUser.FirstName} ${selectedUser.LastName}`,
-    email: `${selectedUser.FirstName.toLowerCase()}.${selectedUser.LastName.toLowerCase()}@company.com`
-  }];
-
   return (
     <AppLayout
-      selectedUsers={selectedUsers}
-      onUsersChange={() => {}} // Not used in IndexedDB mode
-      viewMode="grid"
-      onViewModeChange={(mode) => {
-        if (mode === "calendar") {
-          navigate("/local-calendar");
-        }
-      }}
       selectedUserId={selectedUserId}
       onUserChange={handleUserChange}
     >

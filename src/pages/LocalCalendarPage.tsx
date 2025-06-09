@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { AppLayout } from "../components/Layout/AppLayout";
-import { CalendarView } from "../components/CalendarView/CalendarView";
+import { LocalCalendarView } from "../components/LocalCalendarView";
 import { DateRange } from "../components/DateRangeSelector";
 import { Individual } from "../db/schema";
 import { startOfMonth, endOfMonth } from "date-fns";
@@ -23,28 +23,23 @@ export const LocalCalendarPage: React.FC = () => {
     console.log("Date selected:", date);
   };
 
-  // Convert Individual to User format for legacy compatibility
-  const selectedUsers = selectedUser ? [{
-    id: selectedUser.PK,
-    name: `${selectedUser.FirstName} ${selectedUser.LastName}`,
-    email: `${selectedUser.FirstName.toLowerCase()}.${selectedUser.LastName.toLowerCase()}@company.com`
-  }] : [];
-
   return (
     <AppLayout
-      selectedUsers={selectedUsers}
-      onUsersChange={() => {}} // Not used in IndexedDB mode
-      viewMode="calendar"
-      onViewModeChange={() => {}}
       selectedUserId={selectedUserId}
       onUserChange={handleUserChange}
     >
-      <CalendarView
-        selectedUsers={selectedUsers}
-        onDateSelect={handleDateSelect}
-        dateRange={dateRange}
-        onDateRangeChange={setDateRange}
-      />
+      {selectedUser ? (
+        <LocalCalendarView
+          userId={selectedUser.PK}
+          userName={`${selectedUser.FirstName} ${selectedUser.LastName}`}
+          onDateSelect={handleDateSelect}
+          dateRange={dateRange}
+        />
+      ) : (
+        <div style={{ padding: '20px', textAlign: 'center' }}>
+          <p>Please select a user to view the calendar.</p>
+        </div>
+      )}
     </AppLayout>
   );
 };

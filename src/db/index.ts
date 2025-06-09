@@ -1,44 +1,29 @@
-// Main database initialization and export module
-import { isDexieBackend, FEATURES } from '../config/environment';
+// IndexedDB database initialization
+import { FEATURES } from '../config/environment';
 
 // Database initialization
 export const initializeDatabase = async (): Promise<void> => {
-  if (isDexieBackend()) {
-    // Initialize IndexedDB with Dexie
-    const { initializeDatabase: initDexie } = await import('./seedLocalDynamo');
+  // Initialize IndexedDB with Dexie
+  const { initializeDatabase: initDexie } = await import('./seedLocalDynamo');
 
-    if (FEATURES.autoSeedDatabase) {
-      await initDexie();
-    }
+  if (FEATURES.autoSeedDatabase) {
+    await initDexie();
+  }
 
-    if (FEATURES.enableDebugLogging) {
-      console.log('IndexedDB initialized with Dexie backend');
-    }
-  } else {
-    // Future: Initialize AWS DynamoDB
-    console.log('DynamoDB backend not yet implemented');
+  if (FEATURES.enableDebugLogging) {
+    console.log('IndexedDB initialized successfully');
   }
 };
 
-// Export the appropriate API based on environment
+// Export the IndexedDB API
 export const getDataAPI = async () => {
-  if (isDexieBackend()) {
-    const { localDynamo } = await import('./localDynamo');
-    return localDynamo;
-  } else {
-    // Future: Return AWS DynamoDB client
-    throw new Error('DynamoDB backend not yet implemented');
-  }
+  const { localDynamo } = await import('./localDynamo');
+  return localDynamo;
 };
 
-// Export hooks based on environment
+// Export IndexedDB hooks
 export const getDataHooks = async () => {
-  if (isDexieBackend()) {
-    return await import('../hooks/useLocalData');
-  } else {
-    // Future: Return AWS DynamoDB hooks
-    throw new Error('DynamoDB backend not yet implemented');
-  }
+  return await import('../hooks/useLocalData');
 };
 
 // Re-export types and schemas

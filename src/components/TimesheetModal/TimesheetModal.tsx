@@ -11,6 +11,7 @@ import {
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import { TimesheetGrid } from "../TimesheetGrid/TimesheetGrid";
+import { useWorkdayHours } from "../../hooks/useLocalData";
 import { format, eachDayOfInterval } from "date-fns";
 
 interface TimesheetModalProps {
@@ -20,7 +21,7 @@ interface TimesheetModalProps {
   userName: string;
   startDate: Date;
   endDate: Date;
-  workdays: Record<string, boolean>;
+  workdays?: Record<string, boolean>; // Optional - will fetch from IndexedDB if not provided
 }
 
 export const TimesheetModal: React.FC<TimesheetModalProps> = ({
@@ -30,16 +31,24 @@ export const TimesheetModal: React.FC<TimesheetModalProps> = ({
   userName,
   startDate,
   endDate,
-  workdays,
+  workdays: providedWorkdays,
 }) => {
+  const year = startDate.getFullYear();
+
+  // Get workday hours from IndexedDB if not provided
+  const { data: workdayHours = {} } = useWorkdayHours(userId, year);
+
+  // Use provided workdays or derive from workday hours
+  const workdays = providedWorkdays || workdayHours;
+
   // Get all dates in the period
   const allDates = eachDayOfInterval({ start: startDate, end: endDate });
-  
+
   // Filter out dates that are not workdays (these will be disabled)
   const disabledDates = allDates
     .filter(date => {
       const dateStr = format(date, "yyyy-MM-dd");
-      return !workdays[dateStr];
+      return !workdays[dateStr] || workdays[dateStr] === 0;
     })
     .map(date => format(date, "yyyy-MM-dd"));
 

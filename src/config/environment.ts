@@ -1,17 +1,16 @@
-// Environment configuration for backend switching
-export type BackendType = 'dexie' | 'dynamo';
+// Environment configuration - IndexedDB only
+export type BackendType = 'dexie';
 
 export const getBackendType = (): BackendType => {
-  const backend = process.env.REACT_APP_BACKEND as BackendType;
-  return backend || 'dexie'; // Default to dexie for development
+  return 'dexie'; // Always use IndexedDB
 };
 
 export const isDexieBackend = (): boolean => {
-  return getBackendType() === 'dexie';
+  return true; // Always true
 };
 
 export const isDynamoBackend = (): boolean => {
-  return getBackendType() === 'dynamo';
+  return false; // Always false
 };
 
 // Feature flags

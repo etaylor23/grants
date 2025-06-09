@@ -1,58 +1,40 @@
+// Basic types for legacy compatibility
 export interface User {
   id: string;
   name: string;
   email: string;
 }
 
-export interface Grant {
-  id: string;
-  name: string;
-  color: string;
-  description?: string;
+export type ViewMode = "calendar" | "grid";
+
+export interface ApiError {
+  message: string;
+  code?: string;
 }
 
-export interface Workday {
-  userId: string;
-  year: number;
-  workdays: Record<string, boolean>; // ISO date string -> true
-}
-
+// TimeSlot interfaces for TimesheetGrid
 export interface TimeSlot {
   userId: string;
-  date: string; // ISO date string (YYYY-MM-DD)
+  date: string;
   grantId: string;
-  allocationPercent: number; // 0-100 (kept for backward compatibility)
-  hoursAllocated?: number; // New field for hours-based allocation
+  allocationPercent: number;
+  hoursAllocated: number;
 }
 
 export interface TimeSlotBatch {
   create?: TimeSlot[];
   update?: TimeSlot[];
-  delete?: { userId: string; date: string; grantId: string }[];
-}
-
-export interface DayAllocation {
-  date: string;
-  allocations: { grantId: string; percent: number }[];
-  totalPercent: number;
-  isWorkday: boolean;
+  delete?: Array<{ userId: string; date: string; grantId: string }>;
 }
 
 export interface WorkdayHours {
   userId: string;
-  date: string; // ISO date string (YYYY-MM-DD)
-  availableHours: number; // Default 8 hours per day
+  date: string;
+  availableHours: number;
 }
 
 export interface WorkdayHoursBatch {
   create?: WorkdayHours[];
   update?: WorkdayHours[];
-  delete?: { userId: string; date: string }[];
-}
-
-export type ViewMode = "calendar" | "grid" | "grant";
-
-export interface ApiError {
-  message: string;
-  code?: string;
+  delete?: Array<{ userId: string; date: string }>;
 }

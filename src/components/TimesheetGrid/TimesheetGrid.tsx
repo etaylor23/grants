@@ -16,14 +16,13 @@ import {
   Button,
   Stack,
 } from "@mui/material";
-// Legacy imports removed - using IndexedDB only
+// IndexedDB data hooks
 import {
-  useTimeSlots as useLocalTimeSlots,
-  useWorkdayHours as useLocalWorkdayHours,
+  useTimeSlots,
+  useWorkdayHours,
   useGrants,
   useSaveSlots
 } from "../../hooks/useLocalData";
-import { isDexieBackend } from "../../config/environment";
 import {
   TimeSlot,
   TimeSlotBatch,
@@ -37,8 +36,8 @@ import {
   calculateTotalAvailableHours,
   calculateTotalHoursWorked,
   calculateAveragePercentage,
-  DEFAULT_WORKDAY_HOURS,
 } from "../../utils/dateUtils";
+import { DEFAULT_WORKDAY_HOURS } from "../../db/schema";
 
 interface TimesheetGridProps {
   userId: string;
@@ -72,11 +71,8 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({
   const periodDays = eachDayOfInterval({ start: periodStart, end: periodEnd });
   const year = periodStart.getFullYear();
 
-  // Use IndexedDB data hooks
-  const isLocal = isDexieBackend();
-
-  // Time slots from IndexedDB
-  const timeSlotsQuery = useLocalTimeSlots(
+  // IndexedDB data hooks
+  const timeSlotsQuery = useTimeSlots(
     userId,
     format(periodStart, "yyyy-MM-dd"),
     format(periodEnd, "yyyy-MM-dd")
@@ -86,12 +82,11 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({
   const refetch = timeSlotsQuery.refetch;
 
   // Workday hours from IndexedDB
-  const workdayHoursQuery = useLocalWorkdayHours(userId, year);
+  const workdayHoursQuery = useWorkdayHours(userId, year);
   const workdayHoursData = workdayHoursQuery.data;
 
-  // Grants
-  const { data: localGrants = [] } = useGrants();
-  const grants = localGrants; // Always use IndexedDB grants since we're in Dexie mode
+  // Grants from IndexedDB
+  const { data: grants = [] } = useGrants();
 
   // Mutations
   const saveSlotsMutation = useSaveSlots();
@@ -100,7 +95,7 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({
   const workdayHoursLookup = useMemo(() => {
     const lookup: Record<string, number> = {};
 
-    // For IndexedDB data, workdayHoursData is a Record<string, number>
+    // workdayHoursData is a Record<string, number> from IndexedDB
     const hoursData = workdayHoursData as Record<string, number> || {};
     Object.entries(hoursData).forEach(([date, hours]) => {
       lookup[date] = hours;
