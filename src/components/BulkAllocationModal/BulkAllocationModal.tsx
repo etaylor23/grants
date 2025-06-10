@@ -60,6 +60,18 @@ interface DayAllocation {
   isOverAllocated: boolean;
   isWeekend: boolean;
   isWorkday: boolean;
+  existingSlots?: Array<{
+    grantId: string;
+    grantTitle: string;
+    hours: number;
+  }>;
+  overAllocationAmount?: number;
+}
+
+interface ConflictResolution {
+  date: string;
+  grantToReduce: string;
+  reductionAmount: number;
 }
 
 const initialFormData: BulkAllocationData = {
@@ -87,6 +99,7 @@ export const BulkAllocationModal: React.FC<BulkAllocationModalProps> = ({
   const [showPreview, setShowPreview] = useState(false);
   const [conflictResolution, setConflictResolution] = useState<'reduce' | 'skip' | 'cancel'>('reduce');
   const [showResults, setShowResults] = useState(false);
+  const [conflictResolutions, setConflictResolutions] = useState<ConflictResolution[]>([]);
   const [allocationResults, setAllocationResults] = useState<{
     totalDaysProcessed: number;
     totalHoursAllocated: number;
@@ -141,12 +154,23 @@ export const BulkAllocationModal: React.FC<BulkAllocationModalProps> = ({
       // Calculate current allocations for this day
       const daySlots = timeSlots.filter((slot: any) => slot.Date === dateStr);
       const currentAllocatedHours = daySlots.reduce((sum, slot: any) => sum + (slot.HoursAllocated || 0), 0);
-      
+
+      // Get existing slots with grant information
+      const existingSlots = daySlots.map((slot: any) => {
+        const grant = grants.find((g: any) => g.PK === slot.GrantID);
+        return {
+          grantId: slot.GrantID,
+          grantTitle: grant?.Title || 'Unknown Grant',
+          hours: slot.HoursAllocated || 0,
+        };
+      });
+
       // Calculate new allocation
       const effectiveAvailableHours = isWorkdaySet ? availableHours : (isWeekendDay ? 0 : 8); // Default 8 hours for new workdays
       const newAllocationHours = (effectiveAvailableHours * formData.allocationPercent) / 100;
       const totalAfterAllocation = currentAllocatedHours + newAllocationHours;
-      
+      const overAllocationAmount = Math.max(0, totalAfterAllocation - effectiveAvailableHours);
+
       return {
         date: dateStr,
         availableHours: effectiveAvailableHours,
@@ -156,9 +180,11 @@ export const BulkAllocationModal: React.FC<BulkAllocationModalProps> = ({
         isOverAllocated: totalAfterAllocation > effectiveAvailableHours,
         isWeekend: isWeekendDay,
         isWorkday: isWorkdaySet || !isWeekendDay, // Will be workday if already set or if not weekend
+        existingSlots,
+        overAllocationAmount,
       };
     }).filter(day => !day.isWeekend); // Only show workdays
-  }, [formData, timeSlots, workdayHours]);
+  }, [formData, timeSlots, workdayHours, grants]);
 
   // Validation and conflict analysis
   const validationResult = useMemo(() => {
@@ -167,15 +193,22 @@ export const BulkAllocationModal: React.FC<BulkAllocationModalProps> = ({
     const totalHours = allocationPreview.reduce((sum, day) => sum + day.newAllocationHours, 0);
     const totalDays = allocationPreview.length;
 
+    // Check if all conflicts have resolutions when "reduce" is selected
+    const allConflictsResolved = conflictResolution !== 'reduce' ||
+      conflicts.every(conflict =>
+        conflictResolutions.some(resolution => resolution.date === conflict.date)
+      );
+
     return {
       hasConflicts: conflicts.length > 0,
       conflicts,
       validDays,
       totalHours,
       totalDays,
-      canProceed: conflicts.length === 0 || conflictResolution !== 'cancel',
+      canProceed: (conflicts.length === 0 || conflictResolution !== 'cancel') && allConflictsResolved,
+      allConflictsResolved,
     };
-  }, [allocationPreview, conflictResolution]);
+  }, [allocationPreview, conflictResolution, conflictResolutions]);
 
   const handleInputChange = (field: keyof BulkAllocationData) => (
     event: React.ChangeEvent<HTMLInputElement | { value: unknown }>
@@ -226,7 +259,24 @@ export const BulkAllocationModal: React.FC<BulkAllocationModalProps> = ({
   const handlePreview = () => {
     if (validateForm()) {
       setShowPreview(true);
+      // Initialize conflict resolutions for conflicts
+      const conflicts = allocationPreview.filter(day => day.isOverAllocated);
+      setConflictResolutions(conflicts.map(conflict => ({
+        date: conflict.date,
+        grantToReduce: '',
+        reductionAmount: conflict.overAllocationAmount || 0,
+      })));
     }
+  };
+
+  const handleConflictResolutionChange = (date: string, grantToReduce: string) => {
+    setConflictResolutions(prev =>
+      prev.map(resolution =>
+        resolution.date === date
+          ? { ...resolution, grantToReduce }
+          : resolution
+      )
+    );
   };
 
   const handleApply = async () => {
@@ -250,18 +300,24 @@ export const BulkAllocationModal: React.FC<BulkAllocationModalProps> = ({
           daysToApply = validationResult.validDays;
           daysSkipped = validationResult.conflicts.length;
         } else if (conflictResolution === 'reduce') {
-          // Reduce allocation to fit available capacity
+          // Apply user-selected conflict resolutions
           daysToApply = allocationPreview.map(day => {
             if (day.isOverAllocated) {
-              const maxAllowableHours = day.availableHours - day.currentAllocatedHours;
-              const reducedHours = Math.max(0, maxAllowableHours);
-              conflictsResolved++;
-              return {
-                ...day,
-                newAllocationHours: reducedHours,
-                totalAfterAllocation: day.currentAllocatedHours + reducedHours,
-                isOverAllocated: false,
-              };
+              const resolution = conflictResolutions.find(r => r.date === day.date);
+              if (resolution && resolution.grantToReduce) {
+                conflictsResolved++;
+                // The new allocation can proceed as planned since we'll reduce an existing grant
+                return day;
+              } else {
+                // No resolution selected, skip this day
+                daysSkipped++;
+                return {
+                  ...day,
+                  newAllocationHours: 0,
+                  totalAfterAllocation: day.currentAllocatedHours,
+                  isOverAllocated: false,
+                };
+              }
             }
             return day;
           });
@@ -277,15 +333,56 @@ export const BulkAllocationModal: React.FC<BulkAllocationModalProps> = ({
       }> = [];
 
       daysToApply.forEach(day => {
+        // First, handle conflict resolution by reducing existing grants
+        if (day.isOverAllocated && conflictResolution === 'reduce') {
+          const resolution = conflictResolutions.find(r => r.date === day.date);
+          if (resolution && resolution.grantToReduce) {
+            // Find the existing slot to reduce
+            const existingSlot = timeSlots.find((slot: any) =>
+              slot.Date === day.date && slot.GrantID === resolution.grantToReduce
+            );
+
+            if (existingSlot) {
+              const currentHours = existingSlot.HoursAllocated || 0;
+              const reductionAmount = resolution.reductionAmount;
+              const newHours = Math.max(0, currentHours - reductionAmount);
+
+              operationsApplied.push({
+                date: day.date,
+                hours: -reductionAmount,
+                action: 'reduced'
+              });
+
+              if (newHours > 0) {
+                operations.push({
+                  type: 'put',
+                  timeSlot: {
+                    UserID: userId,
+                    Date: day.date,
+                    GrantID: resolution.grantToReduce,
+                    AllocationPercent: (newHours / day.availableHours) * 100,
+                    HoursAllocated: newHours,
+                  }
+                });
+              } else {
+                operations.push({
+                  type: 'delete',
+                  date: day.date,
+                  grantId: resolution.grantToReduce,
+                });
+              }
+            }
+          }
+        }
+
+        // Then, add the new allocation
         if (day.newAllocationHours > 0) {
           // Check if this is an existing slot or new one
           const existingSlot = timeSlots.find((slot: any) =>
             slot.Date === day.date && slot.GrantID === formData.grantId
           );
 
-          const action = existingSlot ?
-            (day.isOverAllocated && conflictResolution === 'reduce' ? 'reduced' : 'updated') :
-            'created';
+          const action = existingSlot ? 'updated' : 'created';
 
           operationsApplied.push({
             date: day.date,
@@ -549,7 +646,16 @@ export const BulkAllocationModal: React.FC<BulkAllocationModalProps> = ({
                   <Button
                     variant={conflictResolution === 'reduce' ? 'contained' : 'outlined'}
                     size="small"
-                    onClick={() => setConflictResolution('reduce')}
+                    onClick={() => {
+                      setConflictResolution('reduce');
+                      // Initialize conflict resolutions when switching to reduce mode
+                      const conflicts = allocationPreview.filter(day => day.isOverAllocated);
+                      setConflictResolutions(conflicts.map(conflict => ({
+                        date: conflict.date,
+                        grantToReduce: '',
+                        reductionAmount: conflict.overAllocationAmount || 0,
+                      })));
+                    }}
                     sx={{ mr: 1 }}
                   >
                     Reduce to Fit
@@ -557,7 +663,10 @@ export const BulkAllocationModal: React.FC<BulkAllocationModalProps> = ({
                   <Button
                     variant={conflictResolution === 'skip' ? 'contained' : 'outlined'}
                     size="small"
-                    onClick={() => setConflictResolution('skip')}
+                    onClick={() => {
+                      setConflictResolution('skip');
+                      setConflictResolutions([]);
+                    }}
                     sx={{ mr: 1 }}
                   >
                     Skip Conflicts
@@ -565,7 +674,10 @@ export const BulkAllocationModal: React.FC<BulkAllocationModalProps> = ({
                   <Button
                     variant={conflictResolution === 'cancel' ? 'contained' : 'outlined'}
                     size="small"
-                    onClick={() => setConflictResolution('cancel')}
+                    onClick={() => {
+                      setConflictResolution('cancel');
+                      setConflictResolutions([]);
+                    }}
                     color="error"
                   >
                     Cancel
@@ -583,34 +695,77 @@ export const BulkAllocationModal: React.FC<BulkAllocationModalProps> = ({
                     <TableCell align="right">Current</TableCell>
                     <TableCell align="right">New Allocation</TableCell>
                     <TableCell align="right">Total After</TableCell>
+                    {conflictResolution === 'reduce' && (
+                      <TableCell align="center">Grant to Reduce</TableCell>
+                    )}
                     <TableCell align="center">Status</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {allocationPreview.map((day) => (
-                    <TableRow 
-                      key={day.date}
-                      sx={{ 
-                        backgroundColor: day.isOverAllocated ? '#ffebee' : 'inherit'
-                      }}
-                    >
-                      <TableCell>{format(new Date(day.date), 'MMM dd, yyyy')}</TableCell>
-                      <TableCell align="right">{day.availableHours.toFixed(1)}h</TableCell>
-                      <TableCell align="right">{day.currentAllocatedHours.toFixed(1)}h</TableCell>
-                      <TableCell align="right">{day.newAllocationHours.toFixed(1)}h</TableCell>
-                      <TableCell align="right">{day.totalAfterAllocation.toFixed(1)}h</TableCell>
-                      <TableCell align="center">
-                        {day.isOverAllocated ? (
-                          <ErrorIcon color="error" />
-                        ) : (
-                          <CheckIcon color="success" />
+                  {allocationPreview.map((day) => {
+                    const resolution = conflictResolutions.find(r => r.date === day.date);
+                    return (
+                      <TableRow
+                        key={day.date}
+                        sx={{
+                          backgroundColor: day.isOverAllocated ? '#ffebee' : 'inherit'
+                        }}
+                      >
+                        <TableCell>{format(new Date(day.date), 'MMM dd, yyyy')}</TableCell>
+                        <TableCell align="right">{day.availableHours.toFixed(1)}h</TableCell>
+                        <TableCell align="right">{day.currentAllocatedHours.toFixed(1)}h</TableCell>
+                        <TableCell align="right">{day.newAllocationHours.toFixed(1)}h</TableCell>
+                        <TableCell align="right">{day.totalAfterAllocation.toFixed(1)}h</TableCell>
+                        {conflictResolution === 'reduce' && (
+                          <TableCell align="center">
+                            {day.isOverAllocated ? (
+                              <FormControl size="small" sx={{ minWidth: 120 }}>
+                                <Select
+                                  value={resolution?.grantToReduce || ''}
+                                  onChange={(e) => handleConflictResolutionChange(day.date, e.target.value as string)}
+                                  displayEmpty
+                                  error={!resolution?.grantToReduce}
+                                >
+                                  <MenuItem value="" disabled>
+                                    Select Grant
+                                  </MenuItem>
+                                  {day.existingSlots?.map((slot) => (
+                                    <MenuItem key={slot.grantId} value={slot.grantId}>
+                                      {slot.grantTitle} ({slot.hours.toFixed(1)}h)
+                                    </MenuItem>
+                                  ))}
+                                </Select>
+                              </FormControl>
+                            ) : (
+                              <Typography variant="body2" color="text.secondary">
+                                No conflict
+                              </Typography>
+                            )}
+                          </TableCell>
                         )}
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                        <TableCell align="center">
+                          {day.isOverAllocated ? (
+                            conflictResolution === 'reduce' && resolution?.grantToReduce ? (
+                              <CheckIcon color="warning" />
+                            ) : (
+                              <ErrorIcon color="error" />
+                            )
+                          ) : (
+                            <CheckIcon color="success" />
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             </TableContainer>
+
+            {conflictResolution === 'reduce' && !validationResult.allConflictsResolved && (
+              <Alert severity="warning" sx={{ mt: 2 }}>
+                Please select which grants to reduce for all conflicting days before proceeding.
+              </Alert>
+            )}
           </Box>
         )}
       </DialogContent>
