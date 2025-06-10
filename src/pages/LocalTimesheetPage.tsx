@@ -3,10 +3,10 @@ import { useParams, useNavigate } from "react-router-dom";
 import { AppLayout } from "../components/Layout/AppLayout";
 import { TimesheetGrid } from "../components/TimesheetGrid/TimesheetGrid";
 import { TimesheetSynopsis } from "../components/TimesheetSynopsis";
-import { DateRange, DateRangeSelector } from "../components/DateRangeSelector";
+import { PeriodSelector } from "../components/PeriodSelector";
+import { usePeriodSelector } from "../hooks/usePeriodSelector";
 import { Individual } from "../db/schema";
 import { useIndividuals, useTimeSlots, useGrants, useWorkdayHours } from "../hooks/useLocalData";
-import { startOfMonth, endOfMonth } from "date-fns";
 import styles from "../components/Layout/ModernContainer.module.css";
 
 // Helper function to find user by slug
@@ -28,11 +28,16 @@ export const LocalTimesheetPage: React.FC = () => {
 
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [selectedUser, setSelectedUser] = useState<Individual | null>(null);
-  const [dateRange, setDateRange] = useState<DateRange>({
+
+  // Use PeriodSelector for date range management
+  const { selectedPeriod, selectedPeriodOption, handlePeriodChange } = usePeriodSelector('monthly');
+
+  // Default to current month if no period selected yet
+  const dateRange = selectedPeriodOption || {
     startDate: new Date('2025-01-01'),
     endDate: new Date('2025-02-28'),
     label: "January-February 2025",
-  });
+  };
 
   // Fetch data for synopsis (only when user is selected)
   const { data: timeSlots = [] } = useTimeSlots(
@@ -97,6 +102,12 @@ export const LocalTimesheetPage: React.FC = () => {
     >
       <div className={styles.container}>
         <div className={styles.content}>
+          {/* Period Selector */}
+          <PeriodSelector
+            selectedPeriod={selectedPeriod}
+            onPeriodChange={handlePeriodChange}
+          />
+
           <div className={styles.header}>
             <h1 className={styles.title}>
               Timesheet - {selectedUser.FirstName} {selectedUser.LastName}
@@ -104,21 +115,6 @@ export const LocalTimesheetPage: React.FC = () => {
             <p className={styles.subtitle}>
               Track time allocation across grants for the selected period
             </p>
-          </div>
-
-          <div className={styles.section}>
-            <div className={styles.sectionHeader}>
-              <h2 className={styles.sectionTitle}>Date Range Selection</h2>
-              <p className={styles.sectionDescription}>
-                Choose a custom date range to view and edit timesheet data
-              </p>
-            </div>
-            <div className={styles.sectionContent}>
-              <DateRangeSelector
-                selectedRange={dateRange}
-                onRangeChange={setDateRange}
-              />
-            </div>
           </div>
 
           <div className={styles.section}>

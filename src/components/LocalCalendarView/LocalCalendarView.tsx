@@ -7,6 +7,7 @@ import {
   Box,
   Typography,
   Button,
+  Alert,
 } from "@mui/material";
 import {
   useWorkdayHours,
@@ -16,35 +17,37 @@ import {
 import { format, startOfMonth, endOfMonth } from "date-fns";
 import { generateUserColor } from "../../utils/colors";
 import { TimesheetModal } from "../TimesheetModal";
-import { DateRange } from "../DateRangeSelector";
+import { PeriodSelector, PeriodOption } from "../PeriodSelector";
+import { usePeriodSelector } from "../../hooks/usePeriodSelector";
 import styles from "../Layout/ModernContainer.module.css";
 
 interface LocalCalendarViewProps {
   userId: string;
   userName: string;
   onDateSelect?: (date: string) => void;
-  dateRange?: DateRange;
 }
 
 export const LocalCalendarView: React.FC<LocalCalendarViewProps> = ({
   userId,
   userName,
   onDateSelect,
-  dateRange,
 }) => {
   const [timesheetModalOpen, setTimesheetModalOpen] = useState(false);
   const [timesheetStartDate, setTimesheetStartDate] = useState<Date>(new Date());
   const [timesheetEndDate, setTimesheetEndDate] = useState<Date>(new Date());
   const [calendarApi, setCalendarApi] = useState<any>(null);
 
-  // Use provided date range or default to January 2025 (where we have seeded data)
-  const currentDateRange = dateRange || {
+  // Use PeriodSelector for date range management
+  const { selectedPeriod, selectedPeriodOption, handlePeriodChange } = usePeriodSelector('monthly');
+
+  // Default to current month if no period selected yet
+  const currentDateRange = selectedPeriodOption || {
     startDate: new Date('2025-01-01'),
     endDate: new Date('2025-02-28'),
     label: "January-February 2025",
   };
 
-  const year = 2025; // Use 2025 where we have seeded data
+  const year = currentDateRange.startDate.getFullYear();
   const periodStart = format(currentDateRange.startDate, "yyyy-MM-dd");
   const periodEnd = format(currentDateRange.endDate, "yyyy-MM-dd");
 
@@ -154,6 +157,58 @@ export const LocalCalendarView: React.FC<LocalCalendarViewProps> = ({
     return events;
   }, [userId, userName, workdayHours, timeSlots]);
 
+  // Determine calendar view based on selected period
+  const calendarViewConfig = useMemo(() => {
+    const periodId = selectedPeriod;
+
+    switch (periodId) {
+      case 'monthly':
+      case 'lastmonth':
+        return {
+          initialView: 'dayGridMonth',
+          headerToolbar: {
+            left: 'prev,next today',
+            center: 'title',
+            right: 'dayGridMonth',
+          },
+          height: 600,
+        };
+      case '3months':
+      case '6months':
+      case 'last6months':
+        return {
+          initialView: 'dayGridMonth',
+          headerToolbar: {
+            left: 'prev,next today',
+            center: 'title',
+            right: 'dayGridMonth,listMonth',
+          },
+          height: 700,
+        };
+      case 'thisyear':
+      case 'lastyear':
+        return {
+          initialView: 'dayGridMonth',
+          headerToolbar: {
+            left: 'prev,next today',
+            center: 'title',
+            right: 'dayGridMonth,listYear',
+          },
+          height: 800,
+        };
+      default:
+        return {
+          initialView: 'dayGridMonth',
+          headerToolbar: {
+            left: 'prev,next today',
+            center: 'title',
+            right: 'dayGridMonth',
+          },
+          height: 600,
+        };
+    }
+  }, [selectedPeriod]);
+
   // Function to get current calendar period
   const getCurrentCalendarPeriod = useCallback(() => {
     if (!calendarApi) {
@@ -255,16 +310,26 @@ export const LocalCalendarView: React.FC<LocalCalendarViewProps> = ({
   };
 
   return (
-    <div className={styles.container}>
-      <div className={styles.content}>
-        <div className={styles.header}>
-          <h1 className={styles.title}>Calendar View - {userName}</h1>
-          <p className={styles.subtitle}>
-            View time allocations and workdays for the selected period
-          </p>
-        </div>
+    <Box sx={{ width: '100%', minHeight: '100vh', p: 2 }}>
+      {/* Period Selector */}
+      <PeriodSelector
+        selectedPeriod={selectedPeriod}
+        onPeriodChange={handlePeriodChange}
+      />
 
-        <div className={`${styles.alert} ${styles.info}`}>
+      {/* Header */}
+      <Box sx={{ mb: 3 }}>
+        <Typography variant="h4" sx={{ fontWeight: 600, mb: 1 }}>
+          Calendar View - {userName}
+        </Typography>
+        <Typography variant="body1" color="text.secondary">
+          View time allocations and workdays for the selected period
+        </Typography>
+      </Box>
+
+      {/* Info Alert */}
+      <Alert severity="info" sx={{ mb: 3 }}>
+        <Typography variant="body2">
           <strong>How to use:</strong> Click on workday events to edit allocations in the timesheet view.
           <br />
           <strong>Event details:</strong> Shows hours allocated vs available hours and percentage utilization.
@@ -277,101 +342,102 @@ export const LocalCalendarView: React.FC<LocalCalendarViewProps> = ({
             Seed Database
           </Button>
           Events: {events.length}
-        </div>
+        </Typography>
+      </Alert>
 
-        <div className={styles.section}>
-          <div className={styles.sectionHeader}>
-            <h2 className={styles.sectionTitle}>Calendar</h2>
-            <p className={styles.sectionDescription}>
-              {format(currentDateRange.startDate, "MMMM dd, yyyy")} - {format(currentDateRange.endDate, "MMMM dd, yyyy")}
-              {currentDateRange.label && ` (${currentDateRange.label})`}
-            </p>
-          </div>
-          <div className={styles.sectionContent}>
-            <Box
-              sx={{
-                height: "600px",
-                backgroundColor: "#ffffff",
-                borderRadius: 2,
-                border: "1px solid #e0e0e0",
-                overflow: "hidden",
-                "& .fc": {
-                  fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
-                },
-                "& .fc-toolbar": {
-                  padding: "16px 20px",
-                  backgroundColor: "#f8f9fa",
-                  borderBottom: "1px solid #e0e0e0",
-                },
-                "& .fc-toolbar-title": {
-                  fontSize: "1.5rem",
-                  fontWeight: 600,
-                  color: "#1976d2",
-                },
-                "& .fc-button": {
-                  backgroundColor: "#ffffff",
-                  border: "1px solid #d0d7de",
-                  borderRadius: "8px",
-                  color: "#24292f",
-                  fontSize: "0.875rem",
-                  fontWeight: 500,
-                  padding: "8px 16px",
-                  margin: "0 4px",
-                  transition: "all 0.2s ease-in-out",
-                  textTransform: "none",
-                  "&:hover": {
-                    backgroundColor: "#f6f8fa",
-                    borderColor: "#1976d2",
-                    color: "#1976d2",
-                  },
-                  "&.fc-button-active": {
-                    backgroundColor: "#1976d2",
-                    borderColor: "#1976d2",
-                    color: "#ffffff",
-                  },
-                },
-                "& .fc-event": {
-                  borderRadius: "6px",
-                  border: "none",
-                  fontSize: "0.75rem",
-                  fontWeight: 500,
-                  margin: "2px",
-                  padding: "2px 6px",
-                },
-                "& .fc-day-today": {
-                  backgroundColor: "#e3f2fd !important",
-                },
-              }}
-            >
-              <FullCalendar
-                ref={(ref) => {
-                  if (ref) {
-                    setCalendarApi(ref.getApi());
-                  }
-                }}
-                plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
-                initialView="dayGridMonth"
-                initialDate={currentDateRange.startDate}
-                validRange={{
-                  start: currentDateRange.startDate,
-                  end: currentDateRange.endDate,
-                }}
-                headerToolbar={{
-                  left: "prev,next today",
-                  center: "title",
-                  right: "dayGridMonth,timeGridWeek",
-                }}
-                buttonText={{
-                  today: "Today",
-                  month: "Month",
-                  week: "Week",
-                }}
-                events={events}
-                dateClick={handleDateClick}
-                eventClick={handleEventClick}
-                height="100%"
-                dayMaxEvents={3}
-                moreLinkClick="popover"
+      {/* Calendar Section */}
+      <Box sx={{ mb: 3 }}>
+        <Typography variant="h5" sx={{ fontWeight: 600, mb: 1 }}>
+          Calendar
+        </Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+          {format(currentDateRange.startDate, "MMMM dd, yyyy")} - {format(currentDateRange.endDate, "MMMM dd, yyyy")}
+        </Typography>
+
+        <Box
+          sx={{
+            width: '100%',
+            height: calendarViewConfig.height,
+            backgroundColor: "#ffffff",
+            borderRadius: 2,
+            border: "1px solid #e0e0e0",
+            overflow: "hidden",
+            "& .fc": {
+              fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
+              height: '100%',
+            },
+            "& .fc-toolbar": {
+              padding: "16px 20px",
+              backgroundColor: "#f8f9fa",
+              borderBottom: "1px solid #e0e0e0",
+            },
+            "& .fc-toolbar-title": {
+              fontSize: "1.5rem",
+              fontWeight: 600,
+              color: "#1976d2",
+            },
+            "& .fc-button": {
+              backgroundColor: "#ffffff",
+              border: "1px solid #d0d7de",
+              borderRadius: "8px",
+              color: "#24292f",
+              fontSize: "0.875rem",
+              fontWeight: 500,
+              padding: "8px 16px",
+              margin: "0 4px",
+              transition: "all 0.2s ease-in-out",
+              textTransform: "none",
+              "&:hover": {
+                backgroundColor: "#f6f8fa",
+                borderColor: "#1976d2",
+                color: "#1976d2",
+              },
+              "&.fc-button-active": {
+                backgroundColor: "#1976d2",
+                borderColor: "#1976d2",
+                color: "#ffffff",
+              },
+            },
+            "& .fc-event": {
+              borderRadius: "6px",
+              border: "none",
+              fontSize: "0.75rem",
+              fontWeight: 500,
+              margin: "2px",
+              padding: "2px 6px",
+            },
+            "& .fc-day-today": {
+              backgroundColor: "#e3f2fd !important",
+            },
+          }}
+        >
+          <FullCalendar
+            ref={(ref) => {
+              if (ref) {
+                setCalendarApi(ref.getApi());
+              }
+            }}
+            plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
+            initialView={calendarViewConfig.initialView}
+            initialDate={currentDateRange.startDate}
+            validRange={{
+              start: currentDateRange.startDate,
+              end: currentDateRange.endDate,
+            }}
+            headerToolbar={calendarViewConfig.headerToolbar}
+            buttonText={{
+              today: "Today",
+              month: "Month",
+              week: "Week",
+              listMonth: "List",
+              listYear: "Year List",
+            }}
+            events={events}
+            dateClick={handleDateClick}
+            eventClick={handleEventClick}
+            height="100%"
+            dayMaxEvents={3}
+            moreLinkClick="popover"
                 eventContent={(eventInfo) => {
                   const { daySlots, totalHours, availableHours } = eventInfo.event.extendedProps;
 
@@ -408,11 +474,9 @@ export const LocalCalendarView: React.FC<LocalCalendarViewProps> = ({
                     </Box>
                   );
                 }}
-              />
-            </Box>
-          </div>
-        </div>
-      </div>
+          />
+        </Box>
+      </Box>
 
       {/* Timesheet Modal */}
       <TimesheetModal
@@ -423,6 +487,6 @@ export const LocalCalendarView: React.FC<LocalCalendarViewProps> = ({
         startDate={timesheetStartDate}
         endDate={timesheetEndDate}
       />
-    </div>
+    </Box>
   );
 };

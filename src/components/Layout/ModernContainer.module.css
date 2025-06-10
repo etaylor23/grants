@@ -7,10 +7,16 @@
 }
 
 .content {
-  max-width: 1400px;
+  width: 100%;
   margin: 0 auto;
   padding: 2rem;
   background: #ffffff;
+}
+
+/* Full width variant for calendar views */
+.content.fullWidth {
+  max-width: none;
+  width: 100%;
 }
 
 .header {
