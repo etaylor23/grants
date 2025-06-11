@@ -143,9 +143,51 @@ export const UnconstrainedCalendarView: React.FC<UnconstrainedCalendarViewProps>
     return eventList;
   }, [timeSlots, workdayHours, grants, userId, userName]);
 
-  const handleDateClick = (info: any) => {
+  const handleDateClick = async (info: any) => {
     const dateStr = info.dateStr;
     console.log("📅 Date clicked:", dateStr, info);
+
+    try {
+      // Check if this date already has workday hours
+      const existingHours = workdayHours[dateStr];
+
+      if (!existingHours || existingHours === 0) {
+        // Create a default workday entry (8 hours)
+        console.log("Creating workday entry for:", dateStr);
+        const { db, generateWorkdayHoursKey } = await import('../../db/schema');
+
+        const year = new Date(dateStr).getFullYear();
+        const workdayHoursKey = generateWorkdayHoursKey(userId, year);
+
+        // Get existing workday hours record for this year
+        const existingRecord = await db.workdayHours.get([userId, workdayHoursKey]);
+
+        if (existingRecord) {
+          // Update existing record
+          existingRecord.Hours[dateStr] = 8;
+          await db.workdayHours.put(existingRecord);
+        } else {
+          // Create new record
+          await db.workdayHours.put({
+            PK: userId,
+            SK: workdayHoursKey,
+            Hours: { [dateStr]: 8 }, // Default 8 hours
+          });
+        }
+
+        console.log("✅ Workday entry created for", dateStr);
+
+        // Refresh workday hours data
+        // The useWorkdayHours hook should automatically refetch
+      }
+
+      // Open timesheet modal for this date
+      setTimesheetModalOpen(true);
+
+    } catch (error) {
+      console.error("❌ Failed to create workday entry:", error);
+    }
+
     onDateSelect?.(dateStr);
   };
 
@@ -168,11 +210,23 @@ export const UnconstrainedCalendarView: React.FC<UnconstrainedCalendarViewProps>
       {/* Header */}
       <Box sx={{ mb: 3 }}>
         <Typography variant="h5" sx={{ fontWeight: 600, mb: 1 }}>
-          Calendar View - {userName}
+          Organization Calendar View - {userName}
         </Typography>
         <Typography variant="body2" color="text.secondary">
-          Navigate freely through time to view allocations and workdays
+          Navigate freely through time to view allocations for this organization
         </Typography>
+        {organisationId && (
+          <Typography variant="body2" sx={{
+            mt: 1,
+            p: 1,
+            backgroundColor: '#e8f5e8',
+            borderRadius: 1,
+            color: '#2e7d32',
+            fontWeight: 500
+          }}>
+            🏢 Organization-Filtered View: Showing data for this organization only
+          </Typography>
+        )}
       </Box>
 
       {/* Calendar Section */}

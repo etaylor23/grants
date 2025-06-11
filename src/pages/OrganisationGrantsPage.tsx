@@ -177,10 +177,21 @@ export const OrganisationGrantsPage: React.FC = () => {
         }}>
           <Box>
             <Typography variant="h4" sx={{ fontWeight: 600, mb: 1 }}>
-              Grants - {organisation.Name}
+              Organization Grants - {organisation.Name}
             </Typography>
             <Typography variant="body1" color="text.secondary">
-              Manage grants for this organisation
+              Manage grants for this organization only
+            </Typography>
+            <Typography variant="body2" sx={{
+              mt: 1,
+              p: 1,
+              backgroundColor: '#e8f5e8',
+              borderRadius: 1,
+              color: '#2e7d32',
+              fontWeight: 500,
+              display: 'inline-block'
+            }}>
+              🏢 Organization-Filtered View: {organisation.Name} grants only
             </Typography>
           </Box>
           <Button

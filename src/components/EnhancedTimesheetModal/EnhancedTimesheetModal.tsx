@@ -212,10 +212,10 @@ export const EnhancedTimesheetModal: React.FC<EnhancedTimesheetModalProps> = ({
         </IconButton>
       </DialogTitle>
       
-      <DialogContent dividers sx={{ p: 0, height: "100%" }}>
-        <Box sx={{ height: "100%" }}>
-          {/* Period Selector */}
-          <Box sx={{ p: 2, backgroundColor: '#f8f9fa', borderBottom: '1px solid #e0e0e0' }}>
+      <DialogContent dividers sx={{ p: 0, height: "100%", overflow: "hidden", display: "flex", flexDirection: "column" }}>
+        <Box sx={{ height: "100%", display: "flex", flexDirection: "column", overflow: "hidden" }}>
+          {/* Period Selector - Fixed at top */}
+          <Box sx={{ p: 2, backgroundColor: '#f8f9fa', borderBottom: '1px solid #e0e0e0', flexShrink: 0 }}>
             <PeriodSelector
               selectedPeriod={selectedPeriod}
               onPeriodChange={handlePeriodChange}
@@ -269,8 +269,8 @@ export const EnhancedTimesheetModal: React.FC<EnhancedTimesheetModalProps> = ({
             </Box>
           </Box>
 
-          {/* Tabs */}
-          <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+          {/* Tabs - Fixed at top */}
+          <Box sx={{ borderBottom: 1, borderColor: 'divider', flexShrink: 0 }}>
             <Tabs value={tabValue} onChange={handleTabChange} aria-label="timesheet tabs">
               <Tab label="Time Entry" />
               <Tab label="Summary Report" />
@@ -278,23 +278,24 @@ export const EnhancedTimesheetModal: React.FC<EnhancedTimesheetModalProps> = ({
             </Tabs>
           </Box>
 
-          {/* Tab Panels */}
-          <TabPanel value={tabValue} index={0}>
-            <Box sx={{ height: "calc(100% - 200px)", p: 2 }}>
-              <TimesheetGrid
-                userId={userId}
-                startDate={currentDateRange.startDate}
-                endDate={currentDateRange.endDate}
-                disabledDates={disabledDates}
-                showCard={false}
-                showRowColumnControls={true}
-                title={`Time Entry - ${format(currentDateRange.startDate, "MMM dd")} to ${format(currentDateRange.endDate, "MMM dd, yyyy")}`}
-              />
-            </Box>
-          </TabPanel>
+          {/* Tab Panels - Scrollable content area */}
+          <Box sx={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column" }}>
+            <TabPanel value={tabValue} index={0}>
+              <Box sx={{ height: "100%", overflow: "auto", p: 2 }}>
+                <TimesheetGrid
+                  userId={userId}
+                  startDate={currentDateRange.startDate}
+                  endDate={currentDateRange.endDate}
+                  disabledDates={disabledDates}
+                  showCard={false}
+                  showRowColumnControls={true}
+                  title={`Time Entry - ${format(currentDateRange.startDate, "MMM dd")} to ${format(currentDateRange.endDate, "MMM dd, yyyy")}`}
+                />
+              </Box>
+            </TabPanel>
 
-          <TabPanel value={tabValue} index={1}>
-            <Box sx={{ p: 3 }}>
+            <TabPanel value={tabValue} index={1}>
+              <Box sx={{ height: "100%", overflow: "auto", p: 3 }}>
               <Typography variant="h6" sx={{ mb: 3 }}>
                 Summary Report - {currentDateRange.label}
               </Typography>
@@ -458,11 +459,11 @@ export const EnhancedTimesheetModal: React.FC<EnhancedTimesheetModalProps> = ({
                   </Typography>
                 </CardContent>
               </Card>
-            </Box>
-          </TabPanel>
+              </Box>
+            </TabPanel>
 
-          <TabPanel value={tabValue} index={2}>
-            <Box sx={{ p: 3 }}>
+            <TabPanel value={tabValue} index={2}>
+              <Box sx={{ height: "100%", overflow: "auto", p: 3 }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
                 <Typography variant="h6">
                   Grant Breakdown - {currentDateRange.label}
@@ -648,8 +649,9 @@ export const EnhancedTimesheetModal: React.FC<EnhancedTimesheetModalProps> = ({
                   </CardContent>
                 </Card>
               </Box>
-            </Box>
-          </TabPanel>
+              </Box>
+            </TabPanel>
+          </Box>
         </Box>
       </DialogContent>
       

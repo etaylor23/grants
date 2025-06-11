@@ -226,10 +226,21 @@ export const GrantsListPage: React.FC = () => {
         }}>
           <Box>
             <Typography variant="h4" sx={{ fontWeight: 600, mb: 1 }}>
-              Grants Management
+              Global Grants Management
             </Typography>
             <Typography variant="body1" color="text.secondary">
-              View and manage all grants across organisations
+              View and manage grants across all organizations
+            </Typography>
+            <Typography variant="body2" sx={{
+              mt: 1,
+              p: 1,
+              backgroundColor: '#e3f2fd',
+              borderRadius: 1,
+              color: '#1976d2',
+              fontWeight: 500,
+              display: 'inline-block'
+            }}>
+              📊 Global View: Showing grants from all organizations
             </Typography>
           </Box>
           <Button

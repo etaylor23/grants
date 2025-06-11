@@ -197,9 +197,51 @@ export const LocalCalendarView: React.FC<LocalCalendarViewProps> = ({
     setCurrentDate(dateInfo.start);
   }, []);
 
-  const handleDateClick = (info: any) => {
+  const handleDateClick = async (info: any) => {
     const dateStr = info.dateStr;
     console.log("📅 Date clicked:", dateStr, info);
+
+    try {
+      // Check if this date already has workday hours
+      const existingHours = workdayHours[dateStr];
+
+      if (!existingHours || existingHours === 0) {
+        // Create a default workday entry (8 hours)
+        console.log("Creating workday entry for:", dateStr);
+        const { db, generateWorkdayHoursKey } = await import('../../db/schema');
+
+        const year = new Date(dateStr).getFullYear();
+        const workdayHoursKey = generateWorkdayHoursKey(userId, year);
+
+        // Get existing workday hours record for this year
+        const existingRecord = await db.workdayHours.get([userId, workdayHoursKey]);
+
+        if (existingRecord) {
+          // Update existing record
+          existingRecord.Hours[dateStr] = 8;
+          await db.workdayHours.put(existingRecord);
+        } else {
+          // Create new record
+          await db.workdayHours.put({
+            PK: userId,
+            SK: workdayHoursKey,
+            Hours: { [dateStr]: 8 }, // Default 8 hours
+          });
+        }
+
+        console.log("✅ Workday entry created for", dateStr);
+
+        // Refresh workday hours data
+        // The useWorkdayHours hook should automatically refetch
+      }
+
+      // Open timesheet modal for this date
+      setTimesheetModalOpen(true);
+
+    } catch (error) {
+      console.error("❌ Failed to create workday entry:", error);
+    }
+
     onDateSelect?.(dateStr);
   };
 
@@ -272,17 +314,27 @@ export const LocalCalendarView: React.FC<LocalCalendarViewProps> = ({
       {/* Header */}
       <Box sx={{ mb: 3 }}>
         <Typography variant="h4" sx={{ fontWeight: 600, mb: 1 }}>
-          Calendar View - {userName}
+          Global Calendar View - {userName}
         </Typography>
         <Typography variant="body1" color="text.secondary">
-          Navigate freely through time to view allocations and workdays
+          Navigate freely through time to view allocations across all organizations
+        </Typography>
+        <Typography variant="body2" sx={{
+          mt: 1,
+          p: 1,
+          backgroundColor: '#e3f2fd',
+          borderRadius: 1,
+          color: '#1976d2',
+          fontWeight: 500
+        }}>
+          📊 Global View: Showing data from all organizations
         </Typography>
       </Box>
 
       {/* Info Alert */}
       <Alert severity="info" sx={{ mb: 3 }}>
         <Typography variant="body2">
-          <strong>How to use:</strong> Click on workday events to edit allocations in the timesheet view.
+          <strong>How to use:</strong> Click on any calendar day to create a workday entry and open the timesheet. Click on existing workday events to edit allocations.
           <br />
           <strong>Event details:</strong> Shows hours allocated vs available hours and percentage utilization.
           <br />

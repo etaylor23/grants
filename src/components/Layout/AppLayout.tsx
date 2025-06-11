@@ -77,9 +77,14 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
           >
             <MenuIcon />
           </IconButton>
-          <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
-            Grant & Vacation Tracker
-          </Typography>
+          <Box sx={{ flexGrow: 1 }}>
+            <Typography variant="h6" noWrap component="div" sx={{ fontWeight: 600 }}>
+              GrantGrid
+            </Typography>
+            <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '0.7rem' }}>
+              Your workforce, mapped to funding
+            </Typography>
+          </Box>
 
           {/* User Picker and Create Grant Button */}
           {onUserChange && (

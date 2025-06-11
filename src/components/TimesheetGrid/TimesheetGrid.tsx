@@ -113,23 +113,23 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({
     return lookup;
   }, [workdayHoursData, periodDays, disabledDates]);
 
-  // Create grid structure
+  // Create grid structure with reordered columns
   const columns: Column[] = useMemo(() => {
-    const cols: Column[] = [{ columnId: "grant", width: 150 }];
+    const cols: Column[] = [
+      { columnId: "grant", width: 150 },
+      { columnId: "totalHoursWorked", width: 120 },
+      { columnId: "totalValue", width: 120 },
+      { columnId: "averagePercentage", width: 100 },
+      { columnId: "dailyValue", width: 120 }
+    ];
 
+    // Add date columns after the summary columns
     periodDays.forEach((day) => {
       cols.push({
         columnId: format(day, "yyyy-MM-dd"),
         width: 100,
       });
     });
-
-    cols.push(
-      { columnId: "totalHoursWorked", width: 120 },
-      { columnId: "totalValue", width: 120 },
-      { columnId: "averagePercentage", width: 100 },
-      { columnId: "dailyValue", width: 120 }
-    );
 
     return cols;
   }, [periodDays]);
@@ -139,6 +139,10 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({
       rowId: "header",
       cells: [
         { type: "header", text: "Grant" } as HeaderCell,
+        { type: "header", text: "Total Hours" } as HeaderCell,
+        { type: "header", text: "Total Value" } as HeaderCell,
+        { type: "header", text: "Avg %" } as HeaderCell,
+        { type: "header", text: "Daily Value" } as HeaderCell,
         ...periodDays.map(
           (day) =>
             ({
@@ -146,10 +150,6 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({
               text: formatDateOrdinal(day),
             } as HeaderCell)
         ),
-        { type: "header", text: "Total Hours" } as HeaderCell,
-        { type: "header", text: "Total Value" } as HeaderCell,
-        { type: "header", text: "Avg %" } as HeaderCell,
-        { type: "header", text: "Daily Value" } as HeaderCell,
       ],
     };
 
@@ -189,30 +189,7 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({
           text: grantName,
           className: "read-only-cell",
         } as TextCell & { className: string },
-      ];
-
-      // Add date columns
-      periodDays.forEach((day) => {
-        const dateStr = format(day, "yyyy-MM-dd");
-        const slot = timeSlots.find(
-          (s: any) => s.Date === dateStr && s.GrantID === grantId
-        );
-        const isDisabled = disabledDates.includes(dateStr);
-        const maxHours = workdayHoursLookup[dateStr] || 0;
-
-        cells.push({
-          type: "number",
-          value: slot?.HoursAllocated || 0,
-          date: dateStr,
-          grantId: grantId,
-          maxHours: maxHours,
-          nonEditable: isDisabled,
-          className: isDisabled ? "disabled-cell" : "editable-cell",
-        } as NumberCell & { date: string; grantId: string; maxHours: number; nonEditable?: boolean; className: string });
-      });
-
-      // Add calculated columns at the end
-      cells.push(
+        // Add summary columns immediately after grant name
         {
           type: "text",
           text: `${totalHoursWorked.toFixed(1)}h`,
@@ -233,7 +210,27 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({
           text: `£${dailyValue.toFixed(0)}`,
           className: "read-only-cell value-cell",
         } as TextCell & { className: string }
-      );
+      ];
+
+      // Add date columns after summary columns
+      periodDays.forEach((day) => {
+        const dateStr = format(day, "yyyy-MM-dd");
+        const slot = timeSlots.find(
+          (s: any) => s.Date === dateStr && s.GrantID === grantId
+        );
+        const isDisabled = disabledDates.includes(dateStr);
+        const maxHours = workdayHoursLookup[dateStr] || 0;
+
+        cells.push({
+          type: "number",
+          value: slot?.HoursAllocated || 0,
+          date: dateStr,
+          grantId: grantId,
+          maxHours: maxHours,
+          nonEditable: isDisabled,
+          className: isDisabled ? "disabled-cell" : "editable-cell",
+        } as NumberCell & { date: string; grantId: string; maxHours: number; nonEditable?: boolean; className: string });
+      });
 
       return {
         rowId: grantId,
@@ -251,6 +248,10 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({
       rowId: "totalHoursAvailable",
       cells: [
         { type: "header", text: "Total Hours Available to Work" } as HeaderCell,
+        { type: "text", text: `${totalAvailableHours.toFixed(1)}h`, className: "read-only-cell" } as TextCell & { className: string },
+        { type: "text", text: `£${totalAvailableValue.toFixed(0)}`, className: "read-only-cell value-cell" } as TextCell & { className: string },
+        { type: "text", text: "100.0%", className: "read-only-cell" } as TextCell & { className: string },
+        { type: "text", text: `£${dailyAvailableValue.toFixed(0)}`, className: "read-only-cell value-cell" } as TextCell & { className: string },
         ...periodDays.map((day) => {
           const dateStr = format(day, "yyyy-MM-dd");
           const isDisabled = disabledDates.includes(dateStr);
@@ -269,10 +270,6 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({
             className: string;
           };
         }),
-        { type: "text", text: `${totalAvailableHours.toFixed(1)}h`, className: "read-only-cell" } as TextCell & { className: string },
-        { type: "text", text: `£${totalAvailableValue.toFixed(0)}`, className: "read-only-cell value-cell" } as TextCell & { className: string },
-        { type: "text", text: "100.0%", className: "read-only-cell" } as TextCell & { className: string },
-        { type: "text", text: `£${dailyAvailableValue.toFixed(0)}`, className: "read-only-cell value-cell" } as TextCell & { className: string },
       ],
     };
 
@@ -286,6 +283,10 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({
       rowId: "totalHoursUsed",
       cells: [
         { type: "header", text: "Total Hours Used" } as HeaderCell,
+        { type: "text", text: `${totalUsedHours.toFixed(1)}h`, className: "read-only-cell" } as TextCell & { className: string },
+        { type: "text", text: `£${totalUsedValue.toFixed(0)}`, className: "read-only-cell value-cell" } as TextCell & { className: string },
+        { type: "text", text: `${utilizationPercent.toFixed(1)}%`, className: "read-only-cell" } as TextCell & { className: string },
+        { type: "text", text: `£${dailyUsedValue.toFixed(0)}`, className: "read-only-cell value-cell" } as TextCell & { className: string },
         ...periodDays.map((day) => {
           const dateStr = format(day, "yyyy-MM-dd");
           const daySlots = timeSlots.filter((s: any) => s.Date === dateStr);
@@ -305,10 +306,6 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({
               : undefined,
           } as TextCell & { style?: any; className: string };
         }),
-        { type: "text", text: `${totalUsedHours.toFixed(1)}h`, className: "read-only-cell" } as TextCell & { className: string },
-        { type: "text", text: `£${totalUsedValue.toFixed(0)}`, className: "read-only-cell value-cell" } as TextCell & { className: string },
-        { type: "text", text: `${utilizationPercent.toFixed(1)}%`, className: "read-only-cell" } as TextCell & { className: string },
-        { type: "text", text: `£${dailyUsedValue.toFixed(0)}`, className: "read-only-cell value-cell" } as TextCell & { className: string },
       ],
     };
 
@@ -327,7 +324,7 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({
     if (!targetRow) return;
 
     targetRow.cells.forEach((cell, index) => {
-      if (index === 0) return; // Skip grant name column
+      if (index < 5) return; // Skip grant name and summary columns (first 5 columns)
 
       const columnId = columns[index].columnId;
       const dateStr = String(columnId);
@@ -336,7 +333,9 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({
       if (
         disabledDates.includes(dateStr) ||
         columnId === "totalHoursWorked" ||
-        columnId === "averagePercentage"
+        columnId === "totalValue" ||
+        columnId === "averagePercentage" ||
+        columnId === "dailyValue"
       )
         return;
 
@@ -367,7 +366,9 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({
     if (
       columnId === "grant" ||
       columnId === "totalHoursWorked" ||
+      columnId === "totalValue" ||
       columnId === "averagePercentage" ||
+      columnId === "dailyValue" ||
       disabledDates.includes(String(columnId))
     )
       return;
@@ -625,7 +626,7 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({
 
       <Box className="timesheet-grid">
         <ReactGrid
-          stickyLeftColumns={3}
+          stickyLeftColumns={5}
           rows={rows}
           columns={columns}
           onCellsChanged={handleChanges}
