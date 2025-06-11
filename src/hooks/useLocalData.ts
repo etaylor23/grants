@@ -14,6 +14,19 @@ export const useIndividuals = () => {
   });
 };
 
+export const useOrganisations = () => {
+  return useQuery({
+    queryKey: ['organisations'],
+    queryFn: async () => {
+      const { db } = await import('../db/schema');
+      const organisations = await db.organisations.toArray();
+      console.log('Loaded organisations from IndexedDB:', organisations);
+      return organisations;
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+};
+
 export const useGrants = () => {
   return useQuery({
     queryKey: ['grants'],
@@ -119,6 +132,7 @@ export const useCreateUser = () => {
       annualGross: number;
       pension: number;
       nationalIns: number;
+      organisationId: string;
     }) => {
       const { db } = await import('../db/schema');
 
@@ -133,6 +147,7 @@ export const useCreateUser = () => {
         AnnualGross: userData.annualGross,
         Pension: userData.pension,
         NationalIns: userData.nationalIns,
+        OrganisationID: userData.organisationId,
       };
 
       await db.individuals.put(individual);
@@ -148,6 +163,41 @@ export const useCreateUser = () => {
   });
 };
 
+// Hook to create a new organisation
+export const useCreateOrganisation = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (organisationData: {
+      name: string;
+      companyNumber: string;
+    }) => {
+      const { db } = await import('../db/schema');
+
+      // Generate a new organisation ID
+      const timestamp = Date.now();
+      const organisationId = `ORG-${timestamp}`;
+
+      const organisation = {
+        PK: organisationId,
+        Name: organisationData.name,
+        CompanyNumber: organisationData.companyNumber,
+        CreatedDate: new Date().toISOString(),
+      };
+
+      await db.organisations.put(organisation);
+      return organisationId;
+    },
+    onSuccess: () => {
+      // Invalidate organisations query to refresh the list
+      queryClient.invalidateQueries({ queryKey: ['organisations'] });
+    },
+    onError: (error) => {
+      console.error('Create organisation failed:', error);
+    },
+  });
+};
+
 // Hook to create a new grant
 export const useCreateGrant = () => {
   const queryClient = useQueryClient();
@@ -158,6 +208,7 @@ export const useCreateGrant = () => {
       startDate: string;
       endDate: string;
       managerUserId: string;
+      organisationId: string;
     }) => {
       const { db } = await import('../db/schema');
 
@@ -171,6 +222,7 @@ export const useCreateGrant = () => {
         StartDate: grantData.startDate,
         EndDate: grantData.endDate,
         ManagerUserID: grantData.managerUserId,
+        OrganisationID: grantData.organisationId,
       };
 
       await db.grants.put(grant);

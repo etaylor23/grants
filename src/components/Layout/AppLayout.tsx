@@ -24,6 +24,8 @@ import {
   GridOn as GridIcon,
   Person as PersonIcon,
   Add as AddIcon,
+  Assignment as GrantIcon,
+  Business as OrganisationIcon,
 } from "@mui/icons-material";
 // IndexedDB only - no legacy dependencies
 import { ViewMode } from "../../models/types";
@@ -132,6 +134,28 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
                   <CalendarIcon />
                 </ListItemIcon>
                 <ListItemText primary="Calendar View" />
+              </ListItemButton>
+            </ListItem>
+            <ListItem disablePadding>
+              <ListItemButton
+                selected={location.pathname === "/grants"}
+                onClick={() => handleNavigation("/grants")}
+              >
+                <ListItemIcon>
+                  <GrantIcon />
+                </ListItemIcon>
+                <ListItemText primary="Grants" />
+              </ListItemButton>
+            </ListItem>
+            <ListItem disablePadding>
+              <ListItemButton
+                selected={location.pathname === "/organisations"}
+                onClick={() => handleNavigation("/organisations")}
+              >
+                <ListItemIcon>
+                  <OrganisationIcon />
+                </ListItemIcon>
+                <ListItemText primary="Organisations" />
               </ListItemButton>
             </ListItem>
           </List>

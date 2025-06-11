@@ -1,6 +1,13 @@
 import Dexie, { Table } from 'dexie';
 
 // DynamoDB-compatible entity interfaces
+export interface Organisation {
+  PK: string; // OrganisationID - e.g., "ORG-001"
+  Name: string;
+  CompanyNumber: string; // UK Companies House number or equivalent
+  CreatedDate: string; // ISO date format
+}
+
 export interface Individual {
   PK: string; // UserID - e.g., "U-12345"
   FirstName: string;
@@ -8,6 +15,7 @@ export interface Individual {
   AnnualGross: number; // Annual salary in £
   Pension: number; // Annual pension contribution in £
   NationalIns: number; // Annual National Insurance in £
+  OrganisationID: string; // References Organisation.PK
 }
 
 export interface Grant {
@@ -16,6 +24,7 @@ export interface Grant {
   StartDate: string; // ISO date format
   EndDate: string; // ISO date format
   ManagerUserID: string; // References Individuals.PK
+  OrganisationID: string; // References Organisation.PK
 }
 
 export interface Workday {
@@ -43,6 +52,7 @@ export interface TimeSlot {
 // Dexie database class
 export class GrantTrackerDB extends Dexie {
   // Declare tables
+  organisations!: Table<Organisation>;
   individuals!: Table<Individual>;
   grants!: Table<Grant>;
   workdays!: Table<Workday>;
@@ -52,18 +62,67 @@ export class GrantTrackerDB extends Dexie {
   constructor() {
     super('grantTracker');
 
-    // Define schemas
+    // Define schemas - Version 1 (original)
     this.version(1).stores({
       // Primary key only stores
       individuals: 'PK',
       grants: 'PK',
-      
+
       // Compound key stores (PK + SK)
       workdays: '[PK+SK]',
       workdayHours: '[PK+SK]',
-      
+
       // TimeSlots with multiple indexes for DynamoDB GSI emulation
       timeslots: '[PK+SK], PK, Date, [GrantID+Date], [Date+UserID]'
+    });
+
+    // Version 2 - Add organisations and organisational indexes
+    this.version(2).stores({
+      // Add organisations table
+      organisations: 'PK',
+
+      // Update existing tables with organisational indexes
+      individuals: 'PK, OrganisationID',
+      grants: 'PK, OrganisationID',
+
+      // Keep existing compound key stores
+      workdays: '[PK+SK]',
+      workdayHours: '[PK+SK]',
+
+      // TimeSlots with multiple indexes for DynamoDB GSI emulation
+      timeslots: '[PK+SK], PK, Date, [GrantID+Date], [Date+UserID]'
+    }).upgrade(async (trans) => {
+      // Migration logic for existing data
+      console.log('Migrating database to version 2...');
+
+      // Add default organisation
+      const defaultOrg: Organisation = {
+        PK: 'ORG-DEFAULT',
+        Name: 'Default Organisation',
+        CompanyNumber: '00000000',
+        CreatedDate: new Date().toISOString()
+      };
+      await trans.table('organisations').put(defaultOrg);
+
+      // Update all individuals to have OrganisationID
+      const individuals = await trans.table('individuals').toArray();
+      for (const individual of individuals) {
+        if (!individual.OrganisationID) {
+          individual.OrganisationID = 'ORG-DEFAULT';
+          await trans.table('individuals').put(individual);
+        }
+      }
+
+      // Update all grants to have OrganisationID
+      const grants = await trans.table('grants').toArray();
+      for (const grant of grants) {
+        if (!grant.OrganisationID) {
+          grant.OrganisationID = 'ORG-DEFAULT';
+          await trans.table('grants').put(grant);
+        }
+      }
+
+      console.log('Database migration to version 2 completed');
     });
   }
 }

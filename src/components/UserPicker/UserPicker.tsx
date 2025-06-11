@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   FormControl,
   InputLabel,
@@ -13,7 +13,7 @@ import {
   Divider
 } from '@mui/material';
 import { Person as PersonIcon, Add as AddIcon } from '@mui/icons-material';
-import { useIndividuals } from '../../hooks/useLocalData';
+import { useIndividuals, useOrganisations } from '../../hooks/useLocalData';
 import { Individual } from '../../db/schema';
 import { CreateUserModal } from '../CreateUserModal';
 
@@ -29,8 +29,17 @@ export const UserPicker: React.FC<UserPickerProps> = ({
   className
 }) => {
   const { data: individuals = [], isLoading, error } = useIndividuals();
+  const { data: organisations = [] } = useOrganisations();
   const [localSelectedUserId, setLocalSelectedUserId] = useState<string>(selectedUserId || '');
   const [createUserModalOpen, setCreateUserModalOpen] = useState(false);
+
+  // Create organisation lookup
+  const organisationsMap = useMemo(() => {
+    return organisations.reduce((acc, org) => {
+      acc[org.PK] = org;
+      return acc;
+    }, {} as Record<string, any>);
+  }, [organisations]);
 
   // Update local state when prop changes
   useEffect(() => {
@@ -167,6 +176,9 @@ export const UserPicker: React.FC<UserPickerProps> = ({
                     </Typography>
                     <Typography variant="caption" color="text.secondary">
                       {individual.PK} • £{individual.AnnualGross.toLocaleString()}/year
+                      {individual.OrganisationID && organisationsMap[individual.OrganisationID] && (
+                        <> • {organisationsMap[individual.OrganisationID].Name}</>
+                      )}
                     </Typography>
                   </Box>
                 </Box>

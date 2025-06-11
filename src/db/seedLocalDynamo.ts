@@ -1,18 +1,40 @@
-import { 
-  db, 
-  Individual, 
-  Grant, 
-  Workday, 
-  WorkdayHours, 
+import {
+  db,
+  Organisation,
+  Individual,
+  Grant,
+  Workday,
+  WorkdayHours,
   TimeSlot,
   generateWorkdayKey,
   generateWorkdayHoursKey,
   generateTimeSlotKey,
   DEFAULT_WORKDAY_HOURS
 } from './schema';
-import { format, eachDayOfInterval, isWeekend, startOfMonth, endOfMonth } from 'date-fns';
+import { format, eachDayOfInterval, isWeekend, startOfMonth, endOfMonth, addMonths, subMonths } from 'date-fns';
 
 // Realistic test data
+const ORGANISATIONS: Organisation[] = [
+  {
+    PK: "ORG-001",
+    Name: "Optimal Compliance Ltd",
+    CompanyNumber: "12345678",
+    CreatedDate: "2020-01-15T00:00:00.000Z"
+  },
+  {
+    PK: "ORG-002",
+    Name: "Innovation Research Partners",
+    CompanyNumber: "87654321",
+    CreatedDate: "2019-06-20T00:00:00.000Z"
+  },
+  {
+    PK: "ORG-003",
+    Name: "Digital Health Solutions",
+    CompanyNumber: "11223344",
+    CreatedDate: "2021-03-10T00:00:00.000Z"
+  }
+];
+
 const INDIVIDUALS: Individual[] = [
   {
     PK: "U-12345",
@@ -20,7 +42,8 @@ const INDIVIDUALS: Individual[] = [
     LastName: "Taylor",
     AnnualGross: 48000,
     Pension: 1450,
-    NationalIns: 5000
+    NationalIns: 5000,
+    OrganisationID: "ORG-001"
   },
   {
     PK: "U-67890",
@@ -28,7 +51,8 @@ const INDIVIDUALS: Individual[] = [
     LastName: "Johnson",
     AnnualGross: 52000,
     Pension: 1560,
-    NationalIns: 5200
+    NationalIns: 5200,
+    OrganisationID: "ORG-002"
   },
   {
     PK: "U-11111",
@@ -36,54 +60,71 @@ const INDIVIDUALS: Individual[] = [
     LastName: "Chen",
     AnnualGross: 45000,
     Pension: 1350,
-    NationalIns: 4800
+    NationalIns: 4800,
+    OrganisationID: "ORG-001"
   }
 ];
 
-const GRANTS: Grant[] = [
-  {
-    PK: "G-001",
-    Title: "Digital Health Innovation Project",
-    StartDate: "2024-10-01",
-    EndDate: "2025-09-30",
-    ManagerUserID: "U-12345"
-  },
-  {
-    PK: "G-002",
-    Title: "AI Research Initiative",
-    StartDate: "2024-12-01",
-    EndDate: "2025-11-30",
-    ManagerUserID: "U-67890"
-  },
-  {
-    PK: "G-003",
-    Title: "Sustainable Technology Development",
-    StartDate: "2025-01-01",
-    EndDate: "2025-12-31",
-    ManagerUserID: "U-11111"
-  },
-  {
-    PK: "G-004",
-    Title: "Machine Learning Platform",
-    StartDate: "2025-01-15",
-    EndDate: "2025-06-30",
-    ManagerUserID: "U-12345"
-  },
-  {
-    PK: "G-005",
-    Title: "Cloud Infrastructure Modernization",
-    StartDate: "2025-02-01",
-    EndDate: "2025-08-31",
-    ManagerUserID: "U-67890"
-  },
-  {
-    PK: "G-006",
-    Title: "Data Analytics Enhancement",
-    StartDate: "2025-01-01",
-    EndDate: "2025-04-30",
-    ManagerUserID: "U-11111"
-  }
-];
+// Generate grants with dates relative to current month (June 2024)
+const getCurrentMonthGrants = (): Grant[] => {
+  const now = new Date();
+  const currentMonth = startOfMonth(now);
+  const currentYear = now.getFullYear();
+  const currentMonthStr = format(currentMonth, 'yyyy-MM');
+
+  return [
+    {
+      PK: "G-001",
+      Title: "Digital Health Innovation Project",
+      StartDate: format(subMonths(currentMonth, 2), 'yyyy-MM-dd'), // 2 months ago
+      EndDate: format(addMonths(currentMonth, 10), 'yyyy-MM-dd'), // 10 months from now
+      ManagerUserID: "U-12345",
+      OrganisationID: "ORG-003"
+    },
+    {
+      PK: "G-002",
+      Title: "AI Research Initiative",
+      StartDate: format(currentMonth, 'yyyy-MM-dd'), // Current month start
+      EndDate: format(addMonths(currentMonth, 8), 'yyyy-MM-dd'), // 8 months from now
+      ManagerUserID: "U-67890",
+      OrganisationID: "ORG-002"
+    },
+    {
+      PK: "G-003",
+      Title: "Sustainable Technology Development",
+      StartDate: format(subMonths(currentMonth, 1), 'yyyy-MM-dd'), // 1 month ago
+      EndDate: format(addMonths(currentMonth, 6), 'yyyy-MM-dd'), // 6 months from now
+      ManagerUserID: "U-11111",
+      OrganisationID: "ORG-001"
+    },
+    {
+      PK: "G-004",
+      Title: "Machine Learning Platform",
+      StartDate: format(currentMonth, 'yyyy-MM-15'), // Mid current month
+      EndDate: format(addMonths(currentMonth, 3), 'yyyy-MM-dd'), // 3 months from now
+      ManagerUserID: "U-12345",
+      OrganisationID: "ORG-001"
+    },
+    {
+      PK: "G-005",
+      Title: "Cloud Infrastructure Modernization",
+      StartDate: format(currentMonth, 'yyyy-MM-01'), // Current month start
+      EndDate: format(addMonths(currentMonth, 4), 'yyyy-MM-dd'), // 4 months from now
+      ManagerUserID: "U-67890",
+      OrganisationID: "ORG-002"
+    },
+    {
+      PK: "G-006",
+      Title: "Data Analytics Enhancement",
+      StartDate: format(subMonths(currentMonth, 1), 'yyyy-MM-dd'), // 1 month ago
+      EndDate: format(addMonths(currentMonth, 2), 'yyyy-MM-dd'), // 2 months from now
+      ManagerUserID: "U-11111",
+      OrganisationID: "ORG-001"
+    }
+  ];
+};
+
+const GRANTS: Grant[] = getCurrentMonthGrants();
 
 // Helper function to generate workdays for a date range (excluding weekends)
 const generateWorkdaysForPeriod = (startDate: Date, endDate: Date): Record<string, boolean> => {
@@ -178,56 +219,71 @@ export const seedLocalDynamo = async (): Promise<void> => {
     console.log('Starting database seeding...');
     
     // Clear existing data
-    await db.transaction('rw', [db.individuals, db.grants, db.workdays, db.workdayHours, db.timeslots], async () => {
+    await db.transaction('rw', [db.organisations, db.individuals, db.grants, db.workdays, db.workdayHours, db.timeslots], async () => {
+      await db.organisations.clear();
       await db.individuals.clear();
       await db.grants.clear();
       await db.workdays.clear();
       await db.workdayHours.clear();
       await db.timeslots.clear();
     });
-    
+
+    // Seed organisations
+    console.log('Seeding organisations...');
+    for (const organisation of ORGANISATIONS) {
+      await db.organisations.put(organisation);
+    }
+
     // Seed individuals
     console.log('Seeding individuals...');
     for (const individual of INDIVIDUALS) {
       await db.individuals.put(individual);
     }
-    
+
     // Seed grants
     console.log('Seeding grants...');
     for (const grant of GRANTS) {
       await db.grants.put(grant);
     }
     
-    // Generate date ranges for January-February 2025
-    const jan2025Start = new Date('2025-01-01');
-    const jan2025End = endOfMonth(jan2025Start);
-    const feb2025Start = new Date('2025-02-01');
-    const feb2025End = endOfMonth(feb2025Start);
-    
+    // Generate date ranges for current month and surrounding months
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonthStart = startOfMonth(now);
+    const currentMonthEnd = endOfMonth(now);
+    const prevMonthStart = startOfMonth(subMonths(now, 1));
+    const prevMonthEnd = endOfMonth(subMonths(now, 1));
+    const nextMonthStart = startOfMonth(addMonths(now, 1));
+    const nextMonthEnd = endOfMonth(addMonths(now, 1));
+
     // Seed workdays and time slots for each user
     console.log('Seeding workdays and time slots...');
     for (const individual of INDIVIDUALS) {
-      // January 2025
-      const jan2025Workdays = generateWorkdaysForPeriod(jan2025Start, jan2025End);
-      const jan2025Hours = generateWorkdayHoursForPeriod(jan2025Start, jan2025End);
-      
-      // February 2025
-      const feb2025Workdays = generateWorkdaysForPeriod(feb2025Start, feb2025End);
-      const feb2025Hours = generateWorkdayHoursForPeriod(feb2025Start, feb2025End);
-      
-      // Merge all workdays and hours for 2025
-      const allWorkdays = { ...jan2025Workdays, ...feb2025Workdays };
-      const allHours = { ...jan2025Hours, ...feb2025Hours };
-      
+      // Previous month
+      const prevMonthWorkdays = generateWorkdaysForPeriod(prevMonthStart, prevMonthEnd);
+      const prevMonthHours = generateWorkdayHoursForPeriod(prevMonthStart, prevMonthEnd);
+
+      // Current month
+      const currentMonthWorkdays = generateWorkdaysForPeriod(currentMonthStart, currentMonthEnd);
+      const currentMonthHours = generateWorkdayHoursForPeriod(currentMonthStart, currentMonthEnd);
+
+      // Next month
+      const nextMonthWorkdays = generateWorkdaysForPeriod(nextMonthStart, nextMonthEnd);
+      const nextMonthHours = generateWorkdayHoursForPeriod(nextMonthStart, nextMonthEnd);
+
+      // Merge all workdays and hours for current year
+      const allWorkdays = { ...prevMonthWorkdays, ...currentMonthWorkdays, ...nextMonthWorkdays };
+      const allHours = { ...prevMonthHours, ...currentMonthHours, ...nextMonthHours };
+
       await db.workdays.put({
         PK: individual.PK,
-        SK: generateWorkdayKey(individual.PK, 2025),
+        SK: generateWorkdayKey(individual.PK, currentYear),
         Workdays: allWorkdays
       } as Workday);
-      
+
       await db.workdayHours.put({
         PK: individual.PK,
-        SK: generateWorkdayHoursKey(individual.PK, 2025),
+        SK: generateWorkdayHoursKey(individual.PK, currentYear),
         Hours: allHours
       } as WorkdayHours);
       
@@ -239,12 +295,13 @@ export const seedLocalDynamo = async (): Promise<void> => {
     }
     
     console.log('Database seeding completed successfully!');
-    console.log(`Seeded ${INDIVIDUALS.length} individuals, ${GRANTS.length} grants`);
-    
+    console.log(`Seeded ${ORGANISATIONS.length} organisations, ${INDIVIDUALS.length} individuals, ${GRANTS.length} grants`);
+
     // Log summary
     const totalTimeSlots = await db.timeslots.count();
     const totalWorkdays = await db.workdays.count();
-    console.log(`Generated ${totalWorkdays} workday records and ${totalTimeSlots} time slot allocations`);
+    const totalOrganisations = await db.organisations.count();
+    console.log(`Generated ${totalOrganisations} organisations, ${totalWorkdays} workday records and ${totalTimeSlots} time slot allocations`);
     
   } catch (error) {
     console.error('Database seeding failed:', error);
@@ -282,6 +339,7 @@ export const initializeDatabase = async (): Promise<void> => {
       console.log('Database already contains data, skipping auto-seed');
       // Log current counts for debugging
       const counts = {
+        organisations: await db.organisations.count(),
         individuals: await db.individuals.count(),
         grants: await db.grants.count(),
         workdays: await db.workdays.count(),

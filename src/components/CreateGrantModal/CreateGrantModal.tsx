@@ -17,7 +17,7 @@ import {
   MenuItem,
 } from '@mui/material';
 import { Close as CloseIcon } from '@mui/icons-material';
-import { useCreateGrant, useIndividuals } from '../../hooks/useLocalData';
+import { useCreateGrant, useIndividuals, useOrganisations } from '../../hooks/useLocalData';
 
 interface CreateGrantModalProps {
   open: boolean;
@@ -30,6 +30,7 @@ interface GrantFormData {
   startDate: string;
   endDate: string;
   managerUserId: string;
+  organisationId: string;
 }
 
 const initialFormData: GrantFormData = {
@@ -37,6 +38,7 @@ const initialFormData: GrantFormData = {
   startDate: '',
   endDate: '',
   managerUserId: '',
+  organisationId: '',
 };
 
 export const CreateGrantModal: React.FC<CreateGrantModalProps> = ({
@@ -48,6 +50,7 @@ export const CreateGrantModal: React.FC<CreateGrantModalProps> = ({
   const [errors, setErrors] = useState<Partial<GrantFormData>>({});
   const createGrantMutation = useCreateGrant();
   const { data: individuals = [] } = useIndividuals();
+  const { data: organisations = [] } = useOrganisations();
 
   const handleInputChange = (field: keyof GrantFormData) => (
     event: React.ChangeEvent<HTMLInputElement>
@@ -89,6 +92,9 @@ export const CreateGrantModal: React.FC<CreateGrantModalProps> = ({
     if (!formData.managerUserId) {
       newErrors.managerUserId = 'Manager is required';
     }
+    if (!formData.organisationId) {
+      newErrors.organisationId = 'Organisation is required';
+    }
 
     // Date validation
     if (formData.startDate && formData.endDate) {
@@ -115,6 +121,7 @@ export const CreateGrantModal: React.FC<CreateGrantModalProps> = ({
         startDate: formData.startDate,
         endDate: formData.endDate,
         managerUserId: formData.managerUserId,
+        organisationId: formData.organisationId,
       };
 
       const grantId = await createGrantMutation.mutateAsync(grantData);
@@ -218,7 +225,7 @@ export const CreateGrantModal: React.FC<CreateGrantModalProps> = ({
               />
             </Grid>
 
-            <Grid item xs={12}>
+            <Grid item xs={12} sm={6}>
               <FormControl fullWidth error={!!errors.managerUserId}>
                 <InputLabel>Grant Manager</InputLabel>
                 <Select
@@ -235,6 +242,28 @@ export const CreateGrantModal: React.FC<CreateGrantModalProps> = ({
                 {errors.managerUserId && (
                   <Typography variant="caption" color="error" sx={{ mt: 0.5, ml: 1.5 }}>
                     {errors.managerUserId}
+                  </Typography>
+                )}
+              </FormControl>
+            </Grid>
+
+            <Grid item xs={12} sm={6}>
+              <FormControl fullWidth error={!!errors.organisationId}>
+                <InputLabel>Organisation</InputLabel>
+                <Select
+                  value={formData.organisationId}
+                  onChange={handleSelectChange('organisationId')}
+                  label="Organisation"
+                >
+                  {organisations.map((organisation) => (
+                    <MenuItem key={organisation.PK} value={organisation.PK}>
+                      {organisation.Name}
+                    </MenuItem>
+                  ))}
+                </Select>
+                {errors.organisationId && (
+                  <Typography variant="caption" color="error" sx={{ mt: 0.5, ml: 1.5 }}>
+                    {errors.organisationId}
                   </Typography>
                 )}
               </FormControl>

@@ -12,9 +12,13 @@ import {
   Alert,
   InputAdornment,
   Grid,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
 } from '@mui/material';
 import { Close as CloseIcon } from '@mui/icons-material';
-import { useCreateUser } from '../../hooks/useLocalData';
+import { useCreateUser, useOrganisations } from '../../hooks/useLocalData';
 
 interface CreateUserModalProps {
   open: boolean;
@@ -28,6 +32,7 @@ interface UserFormData {
   annualGross: string;
   pension: string;
   nationalIns: string;
+  organisationId: string;
 }
 
 const initialFormData: UserFormData = {
@@ -36,6 +41,7 @@ const initialFormData: UserFormData = {
   annualGross: '',
   pension: '',
   nationalIns: '',
+  organisationId: '',
 };
 
 export const CreateUserModal: React.FC<CreateUserModalProps> = ({
@@ -46,14 +52,27 @@ export const CreateUserModal: React.FC<CreateUserModalProps> = ({
   const [formData, setFormData] = useState<UserFormData>(initialFormData);
   const [errors, setErrors] = useState<Partial<UserFormData>>({});
   const createUserMutation = useCreateUser();
+  const { data: organisations = [] } = useOrganisations();
 
   const handleInputChange = (field: keyof UserFormData) => (
     event: React.ChangeEvent<HTMLInputElement>
   ) => {
     const value = event.target.value;
     setFormData(prev => ({ ...prev, [field]: value }));
-    
+
     // Clear error when user starts typing
+    if (errors[field]) {
+      setErrors(prev => ({ ...prev, [field]: undefined }));
+    }
+  };
+
+  const handleSelectChange = (field: keyof UserFormData) => (
+    event: any
+  ) => {
+    const value = event.target.value;
+    setFormData(prev => ({ ...prev, [field]: value }));
+
+    // Clear error when user makes selection
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: undefined }));
     }
@@ -77,6 +96,9 @@ export const CreateUserModal: React.FC<CreateUserModalProps> = ({
     }
     if (!formData.nationalIns.trim()) {
       newErrors.nationalIns = 'National Insurance is required';
+    }
+    if (!formData.organisationId) {
+      newErrors.organisationId = 'Organisation is required';
     }
 
     // Numeric validation
@@ -117,6 +139,7 @@ export const CreateUserModal: React.FC<CreateUserModalProps> = ({
         annualGross: Number(formData.annualGross),
         pension: Number(formData.pension),
         nationalIns: Number(formData.nationalIns),
+        organisationId: formData.organisationId,
       };
 
       const userId = await createUserMutation.mutateAsync(userData);
@@ -245,6 +268,28 @@ export const CreateUserModal: React.FC<CreateUserModalProps> = ({
                 }}
                 placeholder="5000"
               />
+            </Grid>
+
+            <Grid item xs={12}>
+              <FormControl fullWidth error={!!errors.organisationId}>
+                <InputLabel>Organisation</InputLabel>
+                <Select
+                  value={formData.organisationId}
+                  onChange={handleSelectChange('organisationId')}
+                  label="Organisation"
+                >
+                  {organisations.map((organisation) => (
+                    <MenuItem key={organisation.PK} value={organisation.PK}>
+                      {organisation.Name}
+                    </MenuItem>
+                  ))}
+                </Select>
+                {errors.organisationId && (
+                  <Typography variant="caption" color="error" sx={{ mt: 0.5, ml: 1.5 }}>
+                    {errors.organisationId}
+                  </Typography>
+                )}
+              </FormControl>
             </Grid>
           </Grid>
 

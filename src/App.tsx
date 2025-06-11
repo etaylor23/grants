@@ -12,6 +12,8 @@ import { theme } from "./theme";
 // Legacy pages removed - using IndexedDB only
 import { LocalCalendarPage } from "./pages/LocalCalendarPage";
 import { LocalTimesheetPage } from "./pages/LocalTimesheetPage";
+import { GrantsListPage } from "./pages/GrantsListPage";
+import { OrganisationsListPage } from "./pages/OrganisationsListPage";
 import { initializeDatabase } from "./db/index";
 import { isDexieBackend } from "./config/environment";
 
@@ -81,6 +83,8 @@ function App() {
             {/* IndexedDB routes */}
             <Route path="/calendar" element={<LocalCalendarPage />} />
             <Route path="/timesheet/:userSlug" element={<LocalTimesheetPage />} />
+            <Route path="/grants" element={<GrantsListPage />} />
+            <Route path="/organisations" element={<OrganisationsListPage />} />
 
             {/* Fallback redirect */}
             <Route path="*" element={<Navigate to="/calendar" replace />} />
