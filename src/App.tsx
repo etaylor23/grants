@@ -14,6 +14,11 @@ import { LocalCalendarPage } from "./pages/LocalCalendarPage";
 import { LocalTimesheetPage } from "./pages/LocalTimesheetPage";
 import { GrantsListPage } from "./pages/GrantsListPage";
 import { OrganisationsListPage } from "./pages/OrganisationsListPage";
+import { OrganisationDashboard } from "./pages/OrganisationDashboard";
+import { OrganisationGrantsPage } from "./pages/OrganisationGrantsPage";
+import { OrganisationIndividualsPage } from "./pages/OrganisationIndividualsPage";
+import { OrganisationCalendarPage } from "./pages/OrganisationCalendarPage";
+import { OrganisationTimesheetsPage } from "./pages/OrganisationTimesheetsPage";
 import { initializeDatabase } from "./db/index";
 import { isDexieBackend } from "./config/environment";
 
@@ -85,6 +90,13 @@ function App() {
             <Route path="/timesheet/:userSlug" element={<LocalTimesheetPage />} />
             <Route path="/grants" element={<GrantsListPage />} />
             <Route path="/organisations" element={<OrganisationsListPage />} />
+
+            {/* Organisation-specific routes */}
+            <Route path="/organisation/:orgNumber" element={<OrganisationDashboard />} />
+            <Route path="/organisation/:orgNumber/grants" element={<OrganisationGrantsPage />} />
+            <Route path="/organisation/:orgNumber/individuals" element={<OrganisationIndividualsPage />} />
+            <Route path="/organisation/:orgNumber/calendar" element={<OrganisationCalendarPage />} />
+            <Route path="/organisation/:orgNumber/timesheets" element={<OrganisationTimesheetsPage />} />
 
             {/* Fallback redirect */}
             <Route path="*" element={<Navigate to="/calendar" replace />} />

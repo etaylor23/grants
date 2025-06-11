@@ -1,12 +1,18 @@
 // IndexedDB data hooks for local storage
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
-export const useIndividuals = () => {
+export const useIndividuals = (organisationId?: string) => {
   return useQuery({
-    queryKey: ['individuals'],
+    queryKey: ['individuals', organisationId],
     queryFn: async () => {
       const { db } = await import('../db/schema');
-      const individuals = await db.individuals.toArray();
+      let individuals = await db.individuals.toArray();
+
+      // Filter by organisation if specified
+      if (organisationId) {
+        individuals = individuals.filter(individual => individual.OrganisationID === organisationId);
+      }
+
       console.log('Loaded individuals from IndexedDB:', individuals);
       return individuals;
     },
@@ -27,12 +33,18 @@ export const useOrganisations = () => {
   });
 };
 
-export const useGrants = () => {
+export const useGrants = (organisationId?: string) => {
   return useQuery({
-    queryKey: ['grants'],
+    queryKey: ['grants', organisationId],
     queryFn: async () => {
       const { db } = await import('../db/schema');
-      const grants = await db.grants.toArray();
+      let grants = await db.grants.toArray();
+
+      // Filter by organisation if specified
+      if (organisationId) {
+        grants = grants.filter(grant => grant.OrganisationID === organisationId);
+      }
+
       console.log('Loaded grants from IndexedDB:', grants);
       return grants;
     },

@@ -14,11 +14,9 @@ import {
   useTimeSlots,
   useGrants,
 } from "../../hooks/useLocalData";
-import { format, startOfMonth, endOfMonth } from "date-fns";
+import { format, startOfMonth, endOfMonth, addMonths, subMonths } from "date-fns";
 import { generateUserColor } from "../../utils/colors";
-import { TimesheetModal } from "../TimesheetModal";
-import { PeriodSelector, PeriodOption } from "../PeriodSelector";
-import { usePeriodSelector } from "../../hooks/usePeriodSelector";
+import { EnhancedTimesheetModal } from "../EnhancedTimesheetModal";
 import styles from "../Layout/ModernContainer.module.css";
 
 interface LocalCalendarViewProps {
@@ -33,23 +31,20 @@ export const LocalCalendarView: React.FC<LocalCalendarViewProps> = ({
   onDateSelect,
 }) => {
   const [timesheetModalOpen, setTimesheetModalOpen] = useState(false);
-  const [timesheetStartDate, setTimesheetStartDate] = useState<Date>(new Date());
-  const [timesheetEndDate, setTimesheetEndDate] = useState<Date>(new Date());
   const [calendarApi, setCalendarApi] = useState<any>(null);
+  const [currentDate, setCurrentDate] = useState(new Date());
 
-  // Use PeriodSelector for date range management
-  const { selectedPeriod, selectedPeriodOption, handlePeriodChange } = usePeriodSelector('monthly');
+  // Calculate current view period based on calendar's current view (unconstrained)
+  const currentMonth = startOfMonth(currentDate);
+  const currentMonthEnd = endOfMonth(currentDate);
+  const year = currentDate.getFullYear();
 
-  // Default to current month if no period selected yet
-  const currentDateRange = selectedPeriodOption || {
-    startDate: new Date('2025-01-01'),
-    endDate: new Date('2025-02-28'),
-    label: "January-February 2025",
-  };
+  // Fetch data for current view period (expanded to include adjacent months for smooth navigation)
+  const extendedStart = subMonths(currentMonth, 1);
+  const extendedEnd = addMonths(currentMonthEnd, 1);
 
-  const year = currentDateRange.startDate.getFullYear();
-  const periodStart = format(currentDateRange.startDate, "yyyy-MM-dd");
-  const periodEnd = format(currentDateRange.endDate, "yyyy-MM-dd");
+  const periodStart = format(extendedStart, "yyyy-MM-dd");
+  const periodEnd = format(extendedEnd, "yyyy-MM-dd");
 
   // Fetch data from IndexedDB
   const { data: workdayHours = {} } = useWorkdayHours(userId, year);
@@ -59,6 +54,7 @@ export const LocalCalendarView: React.FC<LocalCalendarViewProps> = ({
   console.log("LocalCalendarView data:", {
     userId,
     userName,
+    currentDate: format(currentDate, 'yyyy-MM-dd'),
     periodStart,
     periodEnd,
     year,
@@ -123,9 +119,9 @@ export const LocalCalendarView: React.FC<LocalCalendarViewProps> = ({
 
       // Create test events for the first few days of the period
       const testDates = [
-        format(currentDateRange.startDate, 'yyyy-MM-dd'),
-        format(new Date(currentDateRange.startDate.getTime() + 24 * 60 * 60 * 1000), 'yyyy-MM-dd'),
-        format(new Date(currentDateRange.startDate.getTime() + 2 * 24 * 60 * 60 * 1000), 'yyyy-MM-dd'),
+        format(currentMonth, 'yyyy-MM-dd'),
+        format(new Date(currentMonth.getTime() + 24 * 60 * 60 * 1000), 'yyyy-MM-dd'),
+        format(new Date(currentMonth.getTime() + 2 * 24 * 60 * 60 * 1000), 'yyyy-MM-dd'),
       ];
 
       testDates.forEach((date, index) => {
@@ -157,83 +153,49 @@ export const LocalCalendarView: React.FC<LocalCalendarViewProps> = ({
     return events;
   }, [userId, userName, workdayHours, timeSlots]);
 
-  // Determine calendar view based on selected period
+  // Calendar view configuration (unconstrained)
   const calendarViewConfig = useMemo(() => {
-    const periodId = selectedPeriod;
-
-    switch (periodId) {
-      case 'monthly':
-      case 'lastmonth':
-        return {
-          initialView: 'dayGridMonth',
-          headerToolbar: {
-            left: 'prev,next today',
-            center: 'title',
-            right: 'dayGridMonth',
-          },
-          height: 600,
-        };
-      case '3months':
-      case '6months':
-      case 'last6months':
-        return {
-          initialView: 'dayGridMonth',
-          headerToolbar: {
-            left: 'prev,next today',
-            center: 'title',
-            right: 'dayGridMonth,listMonth',
-          },
-          height: 700,
-        };
-      case 'thisyear':
-      case 'lastyear':
-        return {
-          initialView: 'dayGridMonth',
-          headerToolbar: {
-            left: 'prev,next today',
-            center: 'title',
-            right: 'dayGridMonth,listYear',
-          },
-          height: 800,
-        };
-      default:
-        return {
-          initialView: 'dayGridMonth',
-          headerToolbar: {
-            left: 'prev,next today',
-            center: 'title',
-            right: 'dayGridMonth',
-          },
-          height: 600,
-        };
-    }
-  }, [selectedPeriod]);
+    return {
+      initialView: 'dayGridMonth',
+      headerToolbar: {
+        left: 'prev,next today',
+        center: 'title',
+        right: 'dayGridMonth,dayGridWeek,listMonth',
+      },
+      height: 700,
+    };
+  }, []);
 
   // Function to get current calendar period
   const getCurrentCalendarPeriod = useCallback(() => {
     if (!calendarApi) {
       return {
-        start: currentDateRange.startDate,
-        end: currentDateRange.endDate,
+        start: currentMonth,
+        end: currentMonthEnd,
       };
     }
 
     const view = calendarApi.view;
-    const currentDate = view.currentStart;
+    const viewCurrentDate = view.currentStart;
 
     switch (view.type) {
       case "dayGridMonth":
         return {
-          start: startOfMonth(currentDate),
-          end: endOfMonth(currentDate),
+          start: startOfMonth(viewCurrentDate),
+          end: endOfMonth(viewCurrentDate),
         };
       default:
         return {
-          start: currentDateRange.startDate,
-          end: currentDateRange.endDate,
+          start: currentMonth,
+          end: currentMonthEnd,
         };
     }
-  }, [calendarApi, currentDateRange]);
+  }, [calendarApi, currentMonth, currentMonthEnd]);
+
+  const handleDatesSet = useCallback((dateInfo: any) => {
+    // Update current date when calendar view changes
+    setCurrentDate(dateInfo.start);
+  }, []);
 
   const handleDateClick = (info: any) => {
     const dateStr = info.dateStr;
@@ -244,17 +206,13 @@ export const LocalCalendarView: React.FC<LocalCalendarViewProps> = ({
   const handleEventClick = (info: any) => {
     console.log("🎯 Event clicked:", info.event, info);
 
-    // Open timesheet modal when clicking on a workday event
+    // Open enhanced timesheet modal when clicking on a workday event
     const eventUserId = info.event.extendedProps?.userId;
     const eventUserName = info.event.extendedProps?.userName;
 
     console.log("Event details:", { eventUserId, eventUserName });
 
     if (eventUserId && eventUserName) {
-      const period = getCurrentCalendarPeriod();
-      console.log("Opening timesheet modal for period:", period);
-      setTimesheetStartDate(period.start);
-      setTimesheetEndDate(period.end);
       setTimesheetModalOpen(true);
     } else {
       console.warn("Event missing user details:", info.event.extendedProps);
@@ -311,19 +269,13 @@ export const LocalCalendarView: React.FC<LocalCalendarViewProps> = ({
 
   return (
     <Box sx={{ width: '100%', minHeight: '100vh', p: 2 }}>
-      {/* Period Selector */}
-      <PeriodSelector
-        selectedPeriod={selectedPeriod}
-        onPeriodChange={handlePeriodChange}
-      />
-
       {/* Header */}
       <Box sx={{ mb: 3 }}>
         <Typography variant="h4" sx={{ fontWeight: 600, mb: 1 }}>
           Calendar View - {userName}
         </Typography>
         <Typography variant="body1" color="text.secondary">
-          View time allocations and workdays for the selected period
+          Navigate freely through time to view allocations and workdays
         </Typography>
       </Box>
 
@@ -351,7 +303,7 @@ export const LocalCalendarView: React.FC<LocalCalendarViewProps> = ({
           Calendar
         </Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          {format(currentDateRange.startDate, "MMMM dd, yyyy")} - {format(currentDateRange.endDate, "MMMM dd, yyyy")}
+          {format(currentMonth, "MMMM yyyy")} - Navigate freely through time
         </Typography>
 
         <Box
@@ -419,11 +371,8 @@ export const LocalCalendarView: React.FC<LocalCalendarViewProps> = ({
             }}
             plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
             initialView={calendarViewConfig.initialView}
-            initialDate={currentDateRange.startDate}
-            validRange={{
-              start: currentDateRange.startDate,
-              end: currentDateRange.endDate,
-            }}
+            initialDate={currentDate}
+            datesSet={handleDatesSet}
             headerToolbar={calendarViewConfig.headerToolbar}
             buttonText={{
               today: "Today",
@@ -478,14 +427,12 @@ export const LocalCalendarView: React.FC<LocalCalendarViewProps> = ({
         </Box>
       </Box>
 
-      {/* Timesheet Modal */}
-      <TimesheetModal
+      {/* Enhanced Timesheet Modal */}
+      <EnhancedTimesheetModal
         open={timesheetModalOpen}
         onClose={() => setTimesheetModalOpen(false)}
         userId={userId}
         userName={userName}
-        startDate={timesheetStartDate}
-        endDate={timesheetEndDate}
       />
     </Box>
   );

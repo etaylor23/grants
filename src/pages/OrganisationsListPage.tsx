@@ -18,8 +18,10 @@ import {
   Save as SaveIcon,
   Cancel as CancelIcon,
   Add as AddIcon,
+  Visibility as ViewIcon,
 } from '@mui/icons-material';
 import { format, parseISO } from 'date-fns';
+import { useNavigate } from 'react-router-dom';
 import { AppLayout } from '../components/Layout/AppLayout';
 import { CreateOrganisationModal } from '../components/CreateOrganisationModal';
 import { useOrganisations } from '../hooks/useLocalData';
@@ -33,6 +35,7 @@ interface EditingOrganisation {
 }
 
 export const OrganisationsListPage: React.FC = () => {
+  const navigate = useNavigate();
   const [createOrganisationModalOpen, setCreateOrganisationModalOpen] = useState(false);
   const [editingOrganisationId, setEditingOrganisationId] = useState<string | null>(null);
   const [editingOrganisation, setEditingOrganisation] = useState<EditingOrganisation | null>(null);
@@ -86,6 +89,10 @@ export const OrganisationsListPage: React.FC = () => {
     } catch (error) {
       return dateString;
     }
+  };
+
+  const handleViewOrganisation = (organisation: Organisation) => {
+    navigate(`/organisation/${organisation.CompanyNumber}`);
   };
 
   return (
@@ -178,13 +185,24 @@ export const OrganisationsListPage: React.FC = () => {
                           </IconButton>
                         </Box>
                       ) : (
-                        <IconButton
-                          size="small"
-                          color="primary"
-                          onClick={() => handleEditStart(organisation)}
-                        >
-                          <EditIcon />
-                        </IconButton>
+                        <Box sx={{ display: 'flex', gap: 1 }}>
+                          <IconButton
+                            size="small"
+                            color="primary"
+                            onClick={() => handleViewOrganisation(organisation)}
+                            title="View Organisation"
+                          >
+                            <ViewIcon />
+                          </IconButton>
+                          <IconButton
+                            size="small"
+                            color="secondary"
+                            onClick={() => handleEditStart(organisation)}
+                            title="Edit Organisation"
+                          >
+                            <EditIcon />
+                          </IconButton>
+                        </Box>
                       )}
                     </TableCell>
                   </TableRow>

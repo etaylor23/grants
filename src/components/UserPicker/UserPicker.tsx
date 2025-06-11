@@ -21,14 +21,16 @@ interface UserPickerProps {
   selectedUserId: string | null;
   onUserChange: (userId: string, user: Individual) => void;
   className?: string;
+  organisationId?: string;
 }
 
 export const UserPicker: React.FC<UserPickerProps> = ({
   selectedUserId,
   onUserChange,
-  className
+  className,
+  organisationId
 }) => {
-  const { data: individuals = [], isLoading, error } = useIndividuals();
+  const { data: individuals = [], isLoading, error } = useIndividuals(organisationId);
   const { data: organisations = [] } = useOrganisations();
   const [localSelectedUserId, setLocalSelectedUserId] = useState<string>(selectedUserId || '');
   const [createUserModalOpen, setCreateUserModalOpen] = useState(false);

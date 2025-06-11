@@ -37,12 +37,14 @@ interface AppLayoutProps {
   children: React.ReactNode;
   selectedUserId?: string | null;
   onUserChange?: (userId: string, user: Individual) => void;
+  organisationId?: string;
 }
 
 export const AppLayout: React.FC<AppLayoutProps> = ({
   children,
   selectedUserId,
   onUserChange,
+  organisationId,
 }) => {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [createGrantModalOpen, setCreateGrantModalOpen] = useState(false);
@@ -85,6 +87,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
               <UserPicker
                 selectedUserId={selectedUserId || null}
                 onUserChange={onUserChange}
+                organisationId={organisationId}
               />
 
               <Button

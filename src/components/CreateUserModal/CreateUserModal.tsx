@@ -24,6 +24,7 @@ interface CreateUserModalProps {
   open: boolean;
   onClose: () => void;
   onUserCreated?: (userId: string) => void;
+  defaultOrganisationId?: string;
 }
 
 interface UserFormData {
@@ -35,21 +36,22 @@ interface UserFormData {
   organisationId: string;
 }
 
-const initialFormData: UserFormData = {
+const getInitialFormData = (defaultOrganisationId?: string): UserFormData => ({
   firstName: '',
   lastName: '',
   annualGross: '',
   pension: '',
   nationalIns: '',
-  organisationId: '',
-};
+  organisationId: defaultOrganisationId || '',
+});
 
 export const CreateUserModal: React.FC<CreateUserModalProps> = ({
   open,
   onClose,
   onUserCreated,
+  defaultOrganisationId,
 }) => {
-  const [formData, setFormData] = useState<UserFormData>(initialFormData);
+  const [formData, setFormData] = useState<UserFormData>(getInitialFormData(defaultOrganisationId));
   const [errors, setErrors] = useState<Partial<UserFormData>>({});
   const createUserMutation = useCreateUser();
   const { data: organisations = [] } = useOrganisations();
@@ -145,7 +147,7 @@ export const CreateUserModal: React.FC<CreateUserModalProps> = ({
       const userId = await createUserMutation.mutateAsync(userData);
       
       // Reset form
-      setFormData(initialFormData);
+      setFormData(getInitialFormData(defaultOrganisationId));
       setErrors({});
       
       // Notify parent component
@@ -159,7 +161,7 @@ export const CreateUserModal: React.FC<CreateUserModalProps> = ({
   };
 
   const handleClose = () => {
-    setFormData(initialFormData);
+    setFormData(getInitialFormData(defaultOrganisationId));
     setErrors({});
     onClose();
   };

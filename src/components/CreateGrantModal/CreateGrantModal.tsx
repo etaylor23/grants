@@ -23,6 +23,7 @@ interface CreateGrantModalProps {
   open: boolean;
   onClose: () => void;
   onGrantCreated?: (grantId: string) => void;
+  defaultOrganisationId?: string;
 }
 
 interface GrantFormData {
@@ -33,20 +34,21 @@ interface GrantFormData {
   organisationId: string;
 }
 
-const initialFormData: GrantFormData = {
+const getInitialFormData = (defaultOrganisationId?: string): GrantFormData => ({
   title: '',
   startDate: '',
   endDate: '',
   managerUserId: '',
-  organisationId: '',
-};
+  organisationId: defaultOrganisationId || '',
+});
 
 export const CreateGrantModal: React.FC<CreateGrantModalProps> = ({
   open,
   onClose,
   onGrantCreated,
+  defaultOrganisationId,
 }) => {
-  const [formData, setFormData] = useState<GrantFormData>(initialFormData);
+  const [formData, setFormData] = useState<GrantFormData>(getInitialFormData(defaultOrganisationId));
   const [errors, setErrors] = useState<Partial<GrantFormData>>({});
   const createGrantMutation = useCreateGrant();
   const { data: individuals = [] } = useIndividuals();
@@ -127,7 +129,7 @@ export const CreateGrantModal: React.FC<CreateGrantModalProps> = ({
       const grantId = await createGrantMutation.mutateAsync(grantData);
       
       // Reset form
-      setFormData(initialFormData);
+      setFormData(getInitialFormData(defaultOrganisationId));
       setErrors({});
       
       // Notify parent component
@@ -141,7 +143,7 @@ export const CreateGrantModal: React.FC<CreateGrantModalProps> = ({
   };
 
   const handleClose = () => {
-    setFormData(initialFormData);
+    setFormData(getInitialFormData(defaultOrganisationId));
     setErrors({});
     onClose();
   };
