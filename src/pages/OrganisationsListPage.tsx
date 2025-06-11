@@ -42,6 +42,9 @@ export const OrganisationsListPage: React.FC = () => {
 
   const { data: organisations = [] } = useOrganisations();
 
+  // Debug logging
+  console.log('OrganisationsListPage - organisations data:', organisations);
+
   const handleEditStart = (organisation: Organisation) => {
     setEditingOrganisationId(organisation.PK);
     setEditingOrganisation({
@@ -92,6 +95,8 @@ export const OrganisationsListPage: React.FC = () => {
   };
 
   const handleViewOrganisation = (organisation: Organisation) => {
+    console.log('Navigating to organisation:', organisation);
+    console.log('URL will be:', `/organisation/${organisation.CompanyNumber}`);
     navigate(`/organisation/${organisation.CompanyNumber}`);
   };
 
@@ -185,15 +190,16 @@ export const OrganisationsListPage: React.FC = () => {
                           </IconButton>
                         </Box>
                       ) : (
-                        <Box sx={{ display: 'flex', gap: 1 }}>
-                          <IconButton
+                        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                          <Button
+                            variant="contained"
                             size="small"
-                            color="primary"
+                            startIcon={<ViewIcon />}
                             onClick={() => handleViewOrganisation(organisation)}
-                            title="View Organisation"
+                            sx={{ mr: 1 }}
                           >
-                            <ViewIcon />
-                          </IconButton>
+                            View
+                          </Button>
                           <IconButton
                             size="small"
                             color="secondary"
@@ -208,6 +214,18 @@ export const OrganisationsListPage: React.FC = () => {
                   </TableRow>
                 );
               })}
+              {organisations.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={4} sx={{ textAlign: 'center', py: 4 }}>
+                    <Typography variant="h6" color="text.secondary" sx={{ mb: 1 }}>
+                      No organisations found
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Create an organisation to get started
+                    </Typography>
+                  </TableCell>
+                </TableRow>
+              )}
             </TableBody>
           </Table>
         </TableContainer>

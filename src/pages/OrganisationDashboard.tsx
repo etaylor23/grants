@@ -1,5 +1,5 @@
 import React from 'react';
-import { useParams, Navigate } from 'react-router-dom';
+import { useParams, Navigate, useNavigate } from 'react-router-dom';
 import { Box, Typography, Grid, Card, CardContent, CardActionArea } from '@mui/material';
 import {
   CalendarToday as CalendarIcon,
@@ -13,12 +13,18 @@ import { BreadcrumbNavigation } from '../components/BreadcrumbNavigation';
 
 export const OrganisationDashboard: React.FC = () => {
   const { orgNumber } = useParams<{ orgNumber: string }>();
+  const navigate = useNavigate();
   const { data: organisations = [] } = useOrganisations();
 
   // Find organisation by company number
   const organisation = organisations.find(org => org.CompanyNumber === orgNumber);
 
+  console.log('OrganisationDashboard - orgNumber:', orgNumber);
+  console.log('OrganisationDashboard - organisations:', organisations);
+  console.log('OrganisationDashboard - found organisation:', organisation);
+
   if (!organisation) {
+    console.log('Organisation not found, redirecting to /organisations');
     return <Navigate to="/organisations" replace />;
   }
 
@@ -90,7 +96,7 @@ export const OrganisationDashboard: React.FC = () => {
               >
                 <CardActionArea
                   sx={{ height: '100%', p: 3 }}
-                  onClick={() => window.location.href = item.path}
+                  onClick={() => navigate(item.path)}
                 >
                   <CardContent sx={{ textAlign: 'center', p: 0 }}>
                     <Box

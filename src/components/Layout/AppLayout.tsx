@@ -163,6 +163,27 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
             </ListItem>
           </List>
 
+          {/* Debug: Test Organisation Link */}
+          <Divider />
+          <List>
+            <ListItem>
+              <ListItemText
+                primary="Debug: Test Organisation"
+                secondary="Click to test org routing"
+              />
+            </ListItem>
+            <ListItem disablePadding>
+              <ListItemButton
+                onClick={() => handleNavigation("/organisation/12345678")}
+              >
+                <ListItemIcon>
+                  <OrganisationIcon />
+                </ListItemIcon>
+                <ListItemText primary="Test Org (12345678)" />
+              </ListItemButton>
+            </ListItem>
+          </List>
+
           <Divider />
 
           <List>
