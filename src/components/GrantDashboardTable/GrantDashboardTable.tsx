@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import {
   useReactTable,
   getCoreRowModel,
@@ -17,6 +17,7 @@ import {
 import { Grant, Individual, TimeSlot } from "../../db/schema";
 import styles from "../../pages/GrantView.module.css";
 import { PeriodType, CostTypeRow } from "../../models/grantDashboard";
+import { CostDrillDownModal } from "../CostDrillDownModal";
 import {
   calculateCostTypeResults,
   formatCurrency,
@@ -36,6 +37,15 @@ export const GrantDashboardTable: React.FC<GrantDashboardTableProps> = ({
   individuals,
   periodType,
 }) => {
+  // Modal state for drill-down
+  const [modalOpen, setModalOpen] = useState(false);
+  const [selectedCostType, setSelectedCostType] = useState<string>("");
+  const [selectedPeriod, setSelectedPeriod] = useState<{
+    label: string;
+    startDate: Date;
+    endDate: Date;
+  } | null>(null);
+
   // Prepare calculation input
   const calculationInput: GrantCalculationInput = useMemo(() => {
     console.log("GrantDashboardTable - Preparing calculation input:", {
@@ -114,6 +124,22 @@ export const GrantDashboardTable: React.FC<GrantDashboardTableProps> = ({
     return tableData[0].periodColumns;
   }, [tableData]);
 
+  // Handle cell click for drill-down
+  const handleCellClick = (
+    costType: string,
+    periodLabel: string,
+    startDate: Date,
+    endDate: Date
+  ) => {
+    setSelectedCostType(costType);
+    setSelectedPeriod({
+      label: periodLabel,
+      startDate,
+      endDate,
+    });
+    setModalOpen(true);
+  };
+
   // Define columns
   const columns = useMemo<ColumnDef<CostTypeRow, any>[]>(() => {
     const baseColumns: ColumnDef<CostTypeRow, any>[] = [
@@ -144,11 +170,35 @@ export const GrantDashboardTable: React.FC<GrantDashboardTableProps> = ({
         header: period.label,
         accessorFn: (row) =>
           row.periodColumns.find((col) => col.id === period.id)?.value || 0,
-        cell: (info) => (
-          <Typography variant="body2">
-            {formatCurrency(info.getValue() as number)}
-          </Typography>
-        ),
+        cell: (info) => {
+          const row = info.row.original;
+          const value = info.getValue() as number;
+
+          return (
+            <Typography
+              variant="body2"
+              sx={{
+                cursor: "pointer",
+                "&:hover": {
+                  backgroundColor: "action.hover",
+                  borderRadius: 1,
+                  padding: "2px 4px",
+                  margin: "-2px -4px",
+                },
+              }}
+              onClick={() =>
+                handleCellClick(
+                  row.costType,
+                  period.label,
+                  new Date(period.startDate),
+                  new Date(period.endDate)
+                )
+              }
+            >
+              {formatCurrency(value)}
+            </Typography>
+          );
+        },
       })
     );
     console.log("periodColumns", periodColumns);
@@ -245,6 +295,32 @@ export const GrantDashboardTable: React.FC<GrantDashboardTableProps> = ({
           </TableBody>
         </Table>
       </TableContainer>
+
+      {/* Cost Drill-Down Modal */}
+      {selectedPeriod && (
+        <CostDrillDownModal
+          open={modalOpen}
+          onClose={() => setModalOpen(false)}
+          grantTitle={grant.Title}
+          costType={selectedCostType}
+          periodLabel={selectedPeriod.label}
+          periodStart={selectedPeriod.startDate}
+          periodEnd={selectedPeriod.endDate}
+          timeSlots={timeSlots.map((slot) => ({
+            userId: slot.UserID,
+            date: slot.Date,
+            grantId: slot.GrantID,
+            hoursAllocated: slot.HoursAllocated,
+          }))}
+          individuals={individuals.map((ind) => ({
+            PK: ind.PK,
+            FirstName: ind.FirstName,
+            LastName: ind.LastName,
+            AnnualGross: ind.AnnualGross,
+          }))}
+          grantId={grant.PK}
+        />
+      )}
     </div>
   );
 };

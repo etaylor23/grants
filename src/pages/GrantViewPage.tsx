@@ -1,20 +1,12 @@
-import React, { useState, useMemo } from "react";
+import React, { useMemo } from "react";
 import { useParams, Navigate } from "react-router-dom";
-import {
-  ToggleButton,
-  ToggleButtonGroup,
-  CircularProgress,
-  Alert,
-  Box,
-} from "@mui/material";
+import { CircularProgress, Alert, Box } from "@mui/material";
 import styles from "./GrantView.module.css";
-import {
-  CalendarToday as CalendarIcon,
-  Assessment as AssessmentIcon,
-} from "@mui/icons-material";
 import { AppLayout } from "../components/Layout/AppLayout";
 import { BreadcrumbNavigation } from "../components/BreadcrumbNavigation";
 import { GrantDashboardTable } from "../components/GrantDashboardTable";
+import { PeriodSelector } from "../components/PeriodSelector";
+import { usePeriodSelector } from "../hooks/usePeriodSelector";
 import {
   useGrants,
   useOrganisations,
@@ -30,7 +22,13 @@ export const GrantViewPage: React.FC<GrantViewPageProps> = () => {
     orgNumber: string;
     grantId: string;
   }>();
-  const [periodType, setPeriodType] = useState<PeriodType>("monthly");
+
+  // Use PeriodSelector for enhanced date range management
+  const { selectedPeriod, handlePeriodChange } = usePeriodSelector("monthly");
+
+  // Convert period selector to PeriodType for the dashboard table
+  const periodType: PeriodType =
+    selectedPeriod === "quarterly" ? "quarterly" : "monthly";
 
   // Data hooks
   const {
@@ -91,15 +89,6 @@ export const GrantViewPage: React.FC<GrantViewPageProps> = () => {
     );
   }
 
-  const handlePeriodTypeChange = (
-    _event: React.MouseEvent<HTMLElement>,
-    newPeriodType: PeriodType | null
-  ) => {
-    if (newPeriodType !== null) {
-      setPeriodType(newPeriodType);
-    }
-  };
-
   const breadcrumbItems = [
     { label: "Home", path: "/" },
     { label: "Organisations", path: "/organisations" },
@@ -150,36 +139,11 @@ export const GrantViewPage: React.FC<GrantViewPageProps> = () => {
             >
               Time Period View:
             </h3>
-            <ToggleButtonGroup
-              value={periodType}
-              exclusive
-              onChange={handlePeriodTypeChange}
-              aria-label="Select time period view for grant data analysis"
-              size="small"
-            >
-              <ToggleButton
-                value="monthly"
-                aria-label="View grant data by monthly periods"
-                aria-describedby="monthly-description"
-              >
-                <CalendarIcon sx={{ mr: 1 }} aria-hidden="true" />
-                Monthly
-                <span id="monthly-description" className={styles.srOnly}>
-                  Display grant costs broken down by individual months
-                </span>
-              </ToggleButton>
-              <ToggleButton
-                value="quarterly"
-                aria-label="View grant data by quarterly periods"
-                aria-describedby="quarterly-description"
-              >
-                <AssessmentIcon sx={{ mr: 1 }} aria-hidden="true" />
-                Quarterly
-                <span id="quarterly-description" className={styles.srOnly}>
-                  Display grant costs broken down by quarters (3-month periods)
-                </span>
-              </ToggleButton>
-            </ToggleButtonGroup>
+            <PeriodSelector
+              selectedPeriod={selectedPeriod}
+              onPeriodChange={handlePeriodChange}
+              className={styles.periodSelector}
+            />
           </div>
         </div>
 
