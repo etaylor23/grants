@@ -1,0 +1,127 @@
+import React from 'react';
+import { useParams, Navigate, useNavigate } from 'react-router-dom';
+import { Box, Typography, Grid, Card, CardContent, CardActionArea } from '@mui/material';
+import {
+  CalendarToday as CalendarIcon,
+  Assignment as GrantIcon,
+  People as PeopleIcon,
+  Schedule as TimesheetIcon,
+} from '@mui/icons-material';
+import { AppLayout } from '../components/Layout/AppLayout';
+import { useOrganisations } from '../hooks/useLocalData';
+import { BreadcrumbNavigation } from '../components/BreadcrumbNavigation';
+
+export const OrganisationDashboard: React.FC = () => {
+  const { orgNumber } = useParams<{ orgNumber: string }>();
+  const navigate = useNavigate();
+  const { data: organisations = [] } = useOrganisations();
+
+  // Find organisation by company number
+  const organisation = organisations.find(org => org.CompanyNumber === orgNumber);
+
+  console.log('OrganisationDashboard - orgNumber:', orgNumber);
+  console.log('OrganisationDashboard - organisations:', organisations);
+  console.log('OrganisationDashboard - found organisation:', organisation);
+
+  if (!organisation) {
+    console.log('Organisation not found, redirecting to /organisations');
+    return <Navigate to="/organisations" replace />;
+  }
+
+  const dashboardItems = [
+    {
+      title: 'Calendar View',
+      description: 'View time allocations and workdays',
+      icon: <CalendarIcon sx={{ fontSize: 40 }} />,
+      path: `/organisation/${orgNumber}/calendar`,
+      color: '#1976d2',
+    },
+    {
+      title: 'Grants Management',
+      description: 'Manage grants for this organisation',
+      icon: <GrantIcon sx={{ fontSize: 40 }} />,
+      path: `/organisation/${orgNumber}/grants`,
+      color: '#2e7d32',
+    },
+    {
+      title: 'Team Members',
+      description: 'View and manage individuals',
+      icon: <PeopleIcon sx={{ fontSize: 40 }} />,
+      path: `/organisation/${orgNumber}/individuals`,
+      color: '#ed6c02',
+    },
+    {
+      title: 'Timesheet Management',
+      description: 'Manage timesheets and time tracking',
+      icon: <TimesheetIcon sx={{ fontSize: 40 }} />,
+      path: `/organisation/${orgNumber}/timesheets`,
+      color: '#9c27b0',
+    },
+  ];
+
+  return (
+    <AppLayout>
+      <Box sx={{ p: 3 }}>
+        <BreadcrumbNavigation
+          items={[
+            { label: 'Home', path: '/' },
+            { label: 'Organisations', path: '/organisations' },
+            { label: organisation.Name, path: `/organisation/${orgNumber}` },
+          ]}
+        />
+
+        {/* Header */}
+        <Box sx={{ mb: 4 }}>
+          <Typography variant="h4" sx={{ fontWeight: 600, mb: 1 }}>
+            {organisation.Name}
+          </Typography>
+          <Typography variant="body1" color="text.secondary">
+            Company Number: {organisation.CompanyNumber}
+          </Typography>
+        </Box>
+
+        {/* Dashboard Grid */}
+        <Grid container spacing={3}>
+          {dashboardItems.map((item) => (
+            <Grid item xs={12} sm={6} md={3} key={item.title}>
+              <Card
+                sx={{
+                  height: '100%',
+                  transition: 'all 0.2s ease-in-out',
+                  '&:hover': {
+                    transform: 'translateY(-4px)',
+                    boxShadow: 4,
+                  },
+                }}
+              >
+                <CardActionArea
+                  sx={{ height: '100%', p: 3 }}
+                  onClick={() => navigate(item.path)}
+                >
+                  <CardContent sx={{ textAlign: 'center', p: 0 }}>
+                    <Box
+                      sx={{
+                        color: item.color,
+                        mb: 2,
+                        display: 'flex',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      {item.icon}
+                    </Box>
+                    <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
+                      {item.title}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      {item.description}
+                    </Typography>
+                  </CardContent>
+                </CardActionArea>
+              </Card>
+            </Grid>
+          ))}
+        </Grid>
+      </Box>
+    </AppLayout>
+  );
+};

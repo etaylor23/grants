@@ -16,35 +16,38 @@ import {
   FormControl,
   Select,
   MenuItem,
-  Chip,
-  Stack,
+  Button,
 } from "@mui/material";
 import {
   Menu as MenuIcon,
   CalendarToday as CalendarIcon,
   GridOn as GridIcon,
   Person as PersonIcon,
+  Add as AddIcon,
+  Assignment as GrantIcon,
+  Business as OrganisationIcon,
 } from "@mui/icons-material";
-import { mockUsers } from "../../api/mockData";
-import { User, ViewMode } from "../../models/types";
-import { generateUserColor } from "../../utils/colors";
+// IndexedDB only - no legacy dependencies
+import { ViewMode } from "../../models/types";
+import { UserPicker } from "../UserPicker";
+import { Individual } from "../../db/schema";
+import { CreateGrantModal } from "../CreateGrantModal";
 
 interface AppLayoutProps {
   children: React.ReactNode;
-  selectedUsers: User[];
-  onUsersChange: (users: User[]) => void;
-  viewMode: ViewMode;
-  onViewModeChange: (mode: ViewMode) => void;
+  selectedUserId?: string | null;
+  onUserChange?: (userId: string, user: Individual) => void;
+  organisationId?: string;
 }
 
 export const AppLayout: React.FC<AppLayoutProps> = ({
   children,
-  selectedUsers,
-  onUsersChange,
-  viewMode,
-  onViewModeChange,
+  selectedUserId,
+  onUserChange,
+  organisationId,
 }) => {
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [createGrantModalOpen, setCreateGrantModalOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -52,21 +55,9 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
     setDrawerOpen(!drawerOpen);
   };
 
-  const handleViewModeChange = (mode: ViewMode) => {
-    if (mode === "calendar") {
-      navigate("/calendar");
-    } else if (mode === "grid") {
-      // Navigate to the first selected user's timesheet
-      if (selectedUsers.length > 0) {
-        const userSlug = selectedUsers[0].name
-          .toLowerCase()
-          .replace(/\s+/g, "-");
-        navigate(`/timesheet/${userSlug}`);
-      }
-    } else if (mode === "grant") {
-      navigate("/grants");
-    }
-    onViewModeChange(mode);
+  // Simplified navigation for IndexedDB mode
+  const handleNavigation = (path: string) => {
+    navigate(path);
     setDrawerOpen(false);
   };
 
@@ -86,77 +77,42 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
           >
             <MenuIcon />
           </IconButton>
-          <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
-            Grant & Vacation Tracker
-          </Typography>
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-            <Typography variant="body2" sx={{ color: "white", mr: 1 }}>
-              Users:
+          <Box sx={{ flexGrow: 1 }}>
+            <Typography variant="h6" noWrap component="div" sx={{ fontWeight: 600 }}>
+              GrantGrid
             </Typography>
-            <Stack direction="row" spacing={1}>
-              {selectedUsers.map((user) => (
-                <Chip
-                  key={user.id}
-                  label={user.name}
-                  size="small"
-                  sx={{
-                    backgroundColor: generateUserColor(user.name),
-                    color: "white",
-                    "& .MuiChip-deleteIcon": {
-                      color: "white",
-                    },
-                  }}
-                  onDelete={() => {
-                    const newUsers = selectedUsers.filter(
-                      (u) => u.id !== user.id
-                    );
-                    onUsersChange(newUsers);
-                  }}
-                />
-              ))}
-              {selectedUsers.length < mockUsers.length && (
-                <FormControl size="small" sx={{ minWidth: 100 }}>
-                  <Select
-                    value=""
-                    onChange={(e) => {
-                      const user = mockUsers.find(
-                        (u) => u.id === e.target.value
-                      );
-                      if (
-                        user &&
-                        !selectedUsers.find((u) => u.id === user.id)
-                      ) {
-                        onUsersChange([...selectedUsers, user]);
-                      }
-                    }}
-                    displayEmpty
-                    sx={{
-                      color: "white",
-                      "& .MuiOutlinedInput-notchedOutline": {
-                        borderColor: "rgba(255, 255, 255, 0.23)",
-                      },
-                      "& .MuiSvgIcon-root": {
-                        color: "white",
-                      },
-                    }}
-                  >
-                    <MenuItem value="" disabled>
-                      Add User
-                    </MenuItem>
-                    {mockUsers
-                      .filter(
-                        (user) => !selectedUsers.find((u) => u.id === user.id)
-                      )
-                      .map((user) => (
-                        <MenuItem key={user.id} value={user.id}>
-                          {user.name}
-                        </MenuItem>
-                      ))}
-                  </Select>
-                </FormControl>
-              )}
-            </Stack>
+            <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '0.7rem' }}>
+              Your workforce, mapped to funding
+            </Typography>
           </Box>
+
+          {/* User Picker and Create Grant Button */}
+          {onUserChange && (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <UserPicker
+                selectedUserId={selectedUserId || null}
+                onUserChange={onUserChange}
+                organisationId={organisationId}
+              />
+
+              <Button
+                variant="outlined"
+                size="small"
+                startIcon={<AddIcon />}
+                onClick={() => setCreateGrantModalOpen(true)}
+                sx={{
+                  color: 'white',
+                  borderColor: 'rgba(255, 255, 255, 0.5)',
+                  '&:hover': {
+                    borderColor: 'white',
+                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                  },
+                }}
+              >
+                Create Grant
+              </Button>
+            </Box>
+          )}
         </Toolbar>
       </AppBar>
 
@@ -180,7 +136,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
             <ListItem disablePadding>
               <ListItemButton
                 selected={location.pathname === "/calendar"}
-                onClick={() => handleViewModeChange("calendar")}
+                onClick={() => handleNavigation("/calendar")}
               >
                 <ListItemIcon>
                   <CalendarIcon />
@@ -188,16 +144,47 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
                 <ListItemText primary="Calendar View" />
               </ListItemButton>
             </ListItem>
-
             <ListItem disablePadding>
               <ListItemButton
-                selected={location.pathname.startsWith("/grants")}
-                onClick={() => handleViewModeChange("grant")}
+                selected={location.pathname === "/grants"}
+                onClick={() => handleNavigation("/grants")}
               >
                 <ListItemIcon>
-                  <GridIcon />
+                  <GrantIcon />
                 </ListItemIcon>
-                <ListItemText primary="Grant View" />
+                <ListItemText primary="Grants" />
+              </ListItemButton>
+            </ListItem>
+            <ListItem disablePadding>
+              <ListItemButton
+                selected={location.pathname === "/organisations"}
+                onClick={() => handleNavigation("/organisations")}
+              >
+                <ListItemIcon>
+                  <OrganisationIcon />
+                </ListItemIcon>
+                <ListItemText primary="Organisations" />
+              </ListItemButton>
+            </ListItem>
+          </List>
+
+          {/* Debug: Test Organisation Link */}
+          <Divider />
+          <List>
+            <ListItem>
+              <ListItemText
+                primary="Debug: Test Organisation"
+                secondary="Click to test org routing"
+              />
+            </ListItem>
+            <ListItem disablePadding>
+              <ListItemButton
+                onClick={() => handleNavigation("/organisation/12345678")}
+              >
+                <ListItemIcon>
+                  <OrganisationIcon />
+                </ListItemIcon>
+                <ListItemText primary="Test Org (12345678)" />
               </ListItemButton>
             </ListItem>
           </List>
@@ -210,26 +197,10 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
                 <PersonIcon />
               </ListItemIcon>
               <ListItemText
-                primary="Selected Users"
-                secondary={`${selectedUsers.length} user${
-                  selectedUsers.length !== 1 ? "s" : ""
-                } selected`}
+                primary="IndexedDB Mode"
+                secondary="Using local database"
               />
             </ListItem>
-            {selectedUsers.map((user) => (
-              <ListItem key={user.id} sx={{ pl: 4 }}>
-                <Box
-                  sx={{
-                    width: 12,
-                    height: 12,
-                    borderRadius: "50%",
-                    backgroundColor: generateUserColor(user.name),
-                    mr: 2,
-                  }}
-                />
-                <ListItemText primary={user.name} />
-              </ListItem>
-            ))}
           </List>
         </Box>
       </Drawer>
@@ -246,6 +217,16 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
       >
         {children}
       </Box>
+
+      {/* Create Grant Modal */}
+      <CreateGrantModal
+        open={createGrantModalOpen}
+        onClose={() => setCreateGrantModalOpen(false)}
+        onGrantCreated={() => {
+          setCreateGrantModalOpen(false);
+          // Could add notification here
+        }}
+      />
     </Box>
   );
 };

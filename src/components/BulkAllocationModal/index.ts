@@ -1,0 +1,1 @@
+export { BulkAllocationModal } from './BulkAllocationModal';

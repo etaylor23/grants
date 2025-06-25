@@ -9,10 +9,30 @@ import {
 } from "@silevis/reactgrid";
 import "./TimesheetGrid.scss";
 import { Box, Typography, Alert, Snackbar, Button, Stack } from "@mui/material";
-import { useTimeSlots, useBatchUpdateTimeSlots } from "../../api/hooks";
-import { mockGrants } from "../../api/mockData";
-import { TimeSlot, TimeSlotBatch, ApiError } from "../../models/types";
+import { BulkAllocationModal } from "../BulkAllocationModal";
+// IndexedDB data hooks
+import {
+  useTimeSlots,
+  useWorkdayHours,
+  useGrants,
+  useSaveSlots,
+  useIndividuals,
+} from "../../hooks/useLocalData";
+import {
+  TimeSlot,
+  TimeSlotBatch,
+  WorkdayHours,
+  WorkdayHoursBatch,
+  ApiError,
+} from "../../models/types";
 import { format, eachDayOfInterval, startOfMonth, endOfMonth } from "date-fns";
+import {
+  formatDateOrdinal,
+  calculateTotalAvailableHours,
+  calculateTotalHoursWorked,
+  calculateAveragePercentage,
+} from "../../utils/dateUtils";
+import { DEFAULT_WORKDAY_HOURS } from "../../db/schema";
 
 interface TimesheetGridProps {
   userId: string;
@@ -39,28 +59,75 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({
     columnId: string;
     value: number;
   } | null>(null);
+  const [bulkAllocationModalOpen, setBulkAllocationModalOpen] = useState(false);
 
   const currentDate = new Date();
   const periodStart = startDate || startOfMonth(currentDate);
   const periodEnd = endDate || endOfMonth(currentDate);
   const periodDays = eachDayOfInterval({ start: periodStart, end: periodEnd });
+  const year = periodStart.getFullYear();
 
-  const { data: timeSlots = [], refetch } = useTimeSlots(
+  // IndexedDB data hooks
+  const timeSlotsQuery = useTimeSlots(
     userId,
     format(periodStart, "yyyy-MM-dd"),
     format(periodEnd, "yyyy-MM-dd")
   );
 
-  const batchUpdateMutation = useBatchUpdateTimeSlots();
+  const timeSlots: any[] = timeSlotsQuery.data || [];
+  const refetch = timeSlotsQuery.refetch;
 
-  // Create grid structure
+  // Workday hours from IndexedDB
+  const workdayHoursQuery = useWorkdayHours(userId, year);
+  const workdayHoursData = workdayHoursQuery.data;
+
+  // Grants from IndexedDB
+  const { data: grants = [] } = useGrants();
+
+  // Individuals from IndexedDB (for salary calculations)
+  const { data: individuals = [] } = useIndividuals();
+  const individual = individuals.find((ind: any) => ind.PK === userId);
+  const annualGross = individual?.AnnualGross || 0;
+  const hourlyRate = annualGross / (260 * 8); // 260 working days, 8 hours per day
+
+  // Mutations
+  const saveSlotsMutation = useSaveSlots();
+
+  // Create workday hours lookup for easy access
+  const workdayHoursLookup = useMemo(() => {
+    const lookup: Record<string, number> = {};
+
+    // workdayHoursData is a Record<string, number> from IndexedDB
+    const hoursData = (workdayHoursData as Record<string, number>) || {};
+    Object.entries(hoursData).forEach(([date, hours]) => {
+      lookup[date] = hours;
+    });
+
+    // Fill in defaults for dates without explicit hours
+    periodDays.forEach((day) => {
+      const dateStr = format(day, "yyyy-MM-dd");
+      if (!lookup[dateStr] && !disabledDates.includes(dateStr)) {
+        lookup[dateStr] = DEFAULT_WORKDAY_HOURS;
+      }
+    });
+    return lookup;
+  }, [workdayHoursData, periodDays, disabledDates]);
+
+  // Create grid structure with reordered columns
   const columns: Column[] = useMemo(() => {
-    const cols: Column[] = [{ columnId: "grant", width: 150 }];
+    const cols: Column[] = [
+      { columnId: "grant", width: 150 },
+      { columnId: "totalHoursWorked", width: 120 },
+      { columnId: "totalValue", width: 120 },
+      { columnId: "averagePercentage", width: 100 },
+      { columnId: "dailyValue", width: 120 }
+    ];
 
+    // Add date columns after the summary columns
     periodDays.forEach((day) => {
       cols.push({
         columnId: format(day, "yyyy-MM-dd"),
-        width: 80,
+        width: 100,
       });
     });
 
@@ -72,72 +139,178 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({
       rowId: "header",
       cells: [
         { type: "header", text: "Grant" } as HeaderCell,
+        { type: "header", text: "Total Hours" } as HeaderCell,
+        { type: "header", text: "Total Value" } as HeaderCell,
+        { type: "header", text: "Avg %" } as HeaderCell,
+        { type: "header", text: "Daily Value" } as HeaderCell,
         ...periodDays.map(
           (day) =>
             ({
               type: "header",
-              text: format(day, "dd"),
+              text: formatDateOrdinal(day),
             } as HeaderCell)
         ),
       ],
     };
 
-    const grantRows: Row[] = mockGrants.map((grant) => {
+    const grantRows: Row[] = grants.map((grant: any) => {
+      // Calculate total hours worked for this grant
+      const periodDates = periodDays.map((day) => format(day, "yyyy-MM-dd"));
+      const grantId = grant.PK; // IndexedDB format
+      const grantName = grant.Title; // IndexedDB format
+      // Transform timeSlots to match the expected format for calculateTotalHoursWorked
+      const normalizedTimeSlots = timeSlots.map((slot: any) => ({
+        date: slot.Date,
+        grantId: slot.GrantID,
+        hoursAllocated: slot.HoursAllocated,
+      }));
+
+      const totalHoursWorked = calculateTotalHoursWorked(
+        normalizedTimeSlots,
+        grantId,
+        periodDates
+      );
+      const totalAvailableHours = calculateTotalAvailableHours(
+        workdayHoursLookup,
+        periodDates
+      );
+      const averagePercentage = calculateAveragePercentage(
+        totalHoursWorked,
+        totalAvailableHours
+      );
+
+      // Calculate financial values
+      const totalValue = totalHoursWorked * hourlyRate;
+      const dailyValue = totalValue / periodDates.length;
+
       const cells: (TextCell | NumberCell)[] = [
-        { type: "text", text: grant.name } as TextCell,
+        {
+          type: "text",
+          text: grantName,
+          className: "read-only-cell",
+        } as TextCell & { className: string },
+        // Add summary columns immediately after grant name
+        {
+          type: "text",
+          text: `${totalHoursWorked.toFixed(1)}h`,
+          className: "read-only-cell",
+        } as TextCell & { className: string },
+        {
+          type: "text",
+          text: `£${totalValue.toFixed(0)}`,
+          className: "read-only-cell value-cell",
+        } as TextCell & { className: string },
+        {
+          type: "text",
+          text: `${averagePercentage.toFixed(1)}%`,
+          className: "read-only-cell",
+        } as TextCell & { className: string },
+        {
+          type: "text",
+          text: `£${dailyValue.toFixed(0)}`,
+          className: "read-only-cell value-cell",
+        } as TextCell & { className: string }
       ];
 
+      // Add date columns after summary columns
       periodDays.forEach((day) => {
         const dateStr = format(day, "yyyy-MM-dd");
         const slot = timeSlots.find(
-          (s) => s.date === dateStr && s.grantId === grant.id
+          (s: any) => s.Date === dateStr && s.GrantID === grantId
         );
         const isDisabled = disabledDates.includes(dateStr);
+        const maxHours = workdayHoursLookup[dateStr] || 0;
 
         cells.push({
           type: "number",
-          value: slot?.allocationPercent || 0,
+          value: slot?.HoursAllocated || 0,
           date: dateStr,
-          grantId: grant.id,
+          grantId: grantId,
+          maxHours: maxHours,
           nonEditable: isDisabled,
-          className: isDisabled ? "disabled-cell" : "",
-        } as NumberCell & {
-          date: string;
-          grantId: string;
-          nonEditable?: boolean;
-          className?: string;
-        });
+          className: isDisabled ? "disabled-cell" : "editable-cell",
+        } as NumberCell & { date: string; grantId: string; maxHours: number; nonEditable?: boolean; className: string });
       });
 
       return {
-        rowId: grant.id,
+        rowId: grantId,
         cells,
       };
     });
 
-    // Add total row
-    const totalRow: Row = {
-      rowId: "total",
+    // Add total hours available row (editable)
+    const periodDates = periodDays.map(day => format(day, "yyyy-MM-dd"));
+    const totalAvailableHours = periodDates.reduce((sum, date) => sum + (workdayHoursLookup[date] || 0), 0);
+    const totalAvailableValue = totalAvailableHours * hourlyRate;
+    const dailyAvailableValue = totalAvailableValue / periodDates.length;
+
+    const totalHoursAvailableRow: Row = {
+      rowId: "totalHoursAvailable",
       cells: [
-        { type: "header", text: "Total %" } as HeaderCell,
+        { type: "header", text: "Total Hours Available to Work" } as HeaderCell,
+        { type: "text", text: `${totalAvailableHours.toFixed(1)}h`, className: "read-only-cell" } as TextCell & { className: string },
+        { type: "text", text: `£${totalAvailableValue.toFixed(0)}`, className: "read-only-cell value-cell" } as TextCell & { className: string },
+        { type: "text", text: "100.0%", className: "read-only-cell" } as TextCell & { className: string },
+        { type: "text", text: `£${dailyAvailableValue.toFixed(0)}`, className: "read-only-cell value-cell" } as TextCell & { className: string },
         ...periodDays.map((day) => {
           const dateStr = format(day, "yyyy-MM-dd");
-          const daySlots = timeSlots.filter((s) => s.date === dateStr);
-          const total = daySlots.reduce(
-            (sum, slot) => sum + slot.allocationPercent,
-            0
-          );
+          const isDisabled = disabledDates.includes(dateStr);
+          const availableHours =
+            workdayHoursLookup[dateStr] || DEFAULT_WORKDAY_HOURS;
 
           return {
-            type: "text",
-            text: `${total}%`,
-          } as TextCell;
+            type: "number",
+            value: availableHours,
+            date: dateStr,
+            nonEditable: isDisabled,
+            className: isDisabled ? "disabled-cell" : "editable-cell",
+          } as NumberCell & {
+            date: string;
+            nonEditable?: boolean;
+            className: string;
+          };
         }),
       ],
     };
 
-    return [headerRow, ...grantRows, totalRow];
-  }, [periodDays, timeSlots, disabledDates]);
+    // Add total hours used row
+    const totalUsedHours = timeSlots.reduce((sum, slot: any) => sum + (slot.HoursAllocated || 0), 0);
+    const totalUsedValue = totalUsedHours * hourlyRate;
+    const dailyUsedValue = totalUsedValue / periodDates.length;
+    const utilizationPercent = totalAvailableHours > 0 ? (totalUsedHours / totalAvailableHours) * 100 : 0;
+
+    const totalHoursUsedRow: Row = {
+      rowId: "totalHoursUsed",
+      cells: [
+        { type: "header", text: "Total Hours Used" } as HeaderCell,
+        { type: "text", text: `${totalUsedHours.toFixed(1)}h`, className: "read-only-cell" } as TextCell & { className: string },
+        { type: "text", text: `£${totalUsedValue.toFixed(0)}`, className: "read-only-cell value-cell" } as TextCell & { className: string },
+        { type: "text", text: `${utilizationPercent.toFixed(1)}%`, className: "read-only-cell" } as TextCell & { className: string },
+        { type: "text", text: `£${dailyUsedValue.toFixed(0)}`, className: "read-only-cell value-cell" } as TextCell & { className: string },
+        ...periodDays.map((day) => {
+          const dateStr = format(day, "yyyy-MM-dd");
+          const daySlots = timeSlots.filter((s: any) => s.Date === dateStr);
+          const totalHours = daySlots.reduce(
+            (sum, slot: any) => sum + (slot.HoursAllocated || 0),
+            0
+          );
+          const availableHours = workdayHoursLookup[dateStr] || 0;
+          const isOverAllocated = totalHours > availableHours;
+
+          return {
+            type: "text",
+            text: `${totalHours.toFixed(1)}h`,
+            className: "read-only-cell",
+            style: isOverAllocated
+              ? { backgroundColor: "#ffebee", color: "#c62828" }
+              : undefined,
+          } as TextCell & { style?: any; className: string };
+        }),
+      ],
+    };
+
+    return [headerRow, ...grantRows, totalHoursAvailableRow, totalHoursUsedRow];
+  }, [periodDays, timeSlots, disabledDates, workdayHoursLookup, grants, hourlyRate]);
 
   // Row and column operations
   const applyToRow = useCallback(() => {
@@ -151,13 +324,20 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({
     if (!targetRow) return;
 
     targetRow.cells.forEach((cell, index) => {
-      if (index === 0) return; // Skip grant name column
+      if (index < 5) return; // Skip grant name and summary columns (first 5 columns)
 
       const columnId = columns[index].columnId;
       const dateStr = String(columnId);
 
-      // Skip disabled dates
-      if (disabledDates.includes(dateStr)) return;
+      // Skip disabled dates and calculated columns
+      if (
+        disabledDates.includes(dateStr) ||
+        columnId === "totalHoursWorked" ||
+        columnId === "totalValue" ||
+        columnId === "averagePercentage" ||
+        columnId === "dailyValue"
+      )
+        return;
 
       if (cell.type === "number") {
         changes.push({
@@ -182,13 +362,21 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({
     const { columnId, value } = selectedCell;
     const changes: any[] = [];
 
-    // Skip if it's the grant column or a disabled date
-    if (columnId === "grant" || disabledDates.includes(String(columnId)))
+    // Skip if it's a non-date column or a disabled date
+    if (
+      columnId === "grant" ||
+      columnId === "totalHoursWorked" ||
+      columnId === "totalValue" ||
+      columnId === "averagePercentage" ||
+      columnId === "dailyValue" ||
+      disabledDates.includes(String(columnId))
+    )
       return;
 
     // Apply to all grant rows (excluding header and total rows)
-    mockGrants.forEach((grant) => {
-      const targetRow = rows.find((row) => row.rowId === grant.id);
+    grants.forEach((grant: any) => {
+      const grantId = grant.PK; // IndexedDB format
+      const targetRow = rows.find((row) => row.rowId === grantId);
       if (!targetRow) return;
 
       const cellIndex = columns.findIndex(
@@ -199,7 +387,7 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({
       const cell = targetRow.cells[cellIndex];
       if (cell.type === "number") {
         changes.push({
-          rowId: grant.id,
+          rowId: grantId,
           columnId: String(columnId),
           newCell: {
             ...cell,
@@ -212,11 +400,16 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({
     if (changes.length > 0) {
       handleChanges(changes);
     }
-  }, [selectedCell, rows, columns, disabledDates]);
+  }, [selectedCell, rows, columns, disabledDates, grants]);
 
   const handleChanges = useCallback(
     async (changes: any[]) => {
-      const batch: TimeSlotBatch = {
+      const timeSlotBatch: TimeSlotBatch = {
+        create: [],
+        update: [],
+        delete: [],
+      };
+      const workdayHoursBatch: WorkdayHoursBatch = {
         create: [],
         update: [],
         delete: [],
@@ -226,47 +419,125 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({
         const cell = change.newCell as NumberCell & {
           date?: string;
           grantId?: string;
+          maxHours?: number;
         };
 
-        if (cell.type === "number" && cell.date && cell.grantId) {
+        if (cell.type === "number" && cell.date) {
           const newValue = cell.value || 0;
-          const existingSlot = timeSlots.find(
-            (s) => s.date === cell.date && s.grantId === cell.grantId
-          );
 
-          if (newValue === 0 && existingSlot) {
-            // Delete slot
-            batch.delete!.push({
-              userId,
-              date: cell.date,
-              grantId: cell.grantId,
-            });
-          } else if (newValue > 0) {
-            const slot: TimeSlot = {
-              userId,
-              date: cell.date,
-              grantId: cell.grantId,
-              allocationPercent: newValue,
-            };
+          // Handle workday hours changes (from totalHoursAvailable row)
+          if (change.rowId === "totalHoursAvailable") {
+            // For IndexedDB, we need to handle workday hours differently
+            const existingHours = null; // Simplified for now
 
-            if (existingSlot) {
-              batch.update!.push(slot);
-            } else {
-              batch.create!.push(slot);
+            // Simplified workday hours handling for now
+            console.log("Workday hours change:", newValue);
+          }
+          // Handle time slot changes (from grant rows)
+          else if (cell.grantId) {
+            // Validate against maximum hours for the day
+            const maxHours =
+              cell.maxHours ||
+              workdayHoursLookup[cell.date] ||
+              DEFAULT_WORKDAY_HOURS;
+
+            // Calculate current total hours for this day (excluding the current grant)
+            const daySlots = timeSlots.filter(
+              (s: any) => s.Date === cell.date && s.GrantID !== cell.grantId
+            );
+            const currentTotalHours = daySlots.reduce(
+              (sum, slot: any) => sum + (slot.HoursAllocated || 0),
+              0
+            );
+
+            if (newValue + currentTotalHours > maxHours) {
+              setError(
+                `Cannot allocate ${newValue} hours. Maximum available: ${
+                  maxHours - currentTotalHours
+                } hours for this day.`
+              );
+              return;
+            }
+
+            const existingSlot = timeSlots.find(
+              (s: any) => s.Date === cell.date && s.GrantID === cell.grantId
+            );
+
+            if (newValue === 0 && existingSlot) {
+              // Delete slot
+              timeSlotBatch.delete!.push({
+                userId,
+                date: cell.date,
+                grantId: cell.grantId,
+              });
+            } else if (newValue > 0) {
+              // Calculate percentage for backward compatibility
+              const percentage = maxHours > 0 ? (newValue / maxHours) * 100 : 0;
+
+              const slot: any = {
+                userId,
+                date: cell.date,
+                grantId: cell.grantId,
+                allocationPercent: percentage,
+                hoursAllocated: newValue,
+              };
+
+              if (existingSlot) {
+                timeSlotBatch.update!.push(slot);
+              } else {
+                timeSlotBatch.create!.push(slot);
+              }
             }
           }
         }
       }
 
       try {
-        await batchUpdateMutation.mutateAsync(batch);
+        // Use IndexedDB save functionality
+        const operations: Array<{
+          type: "put" | "delete";
+          timeSlot?: any;
+          date?: string;
+          grantId?: string;
+        }> = [];
+
+        // Convert batch operations to IndexedDB operations
+        timeSlotBatch.create?.forEach((slot) => {
+          operations.push({
+            type: "put",
+            timeSlot: slot,
+          });
+        });
+
+        timeSlotBatch.update?.forEach((slot) => {
+          operations.push({
+            type: "put",
+            timeSlot: slot,
+          });
+        });
+
+        timeSlotBatch.delete?.forEach((deleteInfo) => {
+          operations.push({
+            type: "delete",
+            date: deleteInfo.date,
+            grantId: deleteInfo.grantId,
+          });
+        });
+
+        if (operations.length > 0) {
+          await saveSlotsMutation.mutateAsync({
+            userId,
+            operations,
+          });
+        }
+
         await refetch();
       } catch (err: any) {
         const apiError = err as ApiError;
-        setError(apiError.message || "Failed to update time slots");
+        setError(apiError.message || "Failed to update timesheet");
       }
     },
-    [timeSlots, userId, batchUpdateMutation, refetch]
+    [timeSlots, workdayHoursLookup, saveSlotsMutation, refetch, userId]
   );
 
   const handleCloseError = () => {
@@ -277,8 +548,13 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({
     (location: any) => {
       const { rowId, columnId } = location;
 
-      // Skip if it's header or total row
-      if (rowId === "header" || rowId === "total") return;
+      // Skip if it's header or total rows
+      if (
+        rowId === "header" ||
+        rowId === "totalHoursAvailable" ||
+        rowId === "totalHoursUsed"
+      )
+        return;
 
       // Skip if it's the grant column
       if (columnId === "grant") return;
@@ -306,12 +582,26 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({
 
   const gridContent = (
     <>
+      {/* Bulk Allocation Controls */}
+      <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Typography variant="h6" sx={{ fontWeight: 500 }}>
+          Time Allocation Grid
+        </Typography>
+        <Button
+          variant="contained"
+          color="primary"
+          onClick={() => setBulkAllocationModalOpen(true)}
+          sx={{ minWidth: 150 }}
+        >
+          Bulk Allocation
+        </Button>
+      </Box>
+
       {showRowColumnControls && selectedCell && (
         <Box sx={{ mb: 2 }}>
           <Stack direction="row" spacing={2} alignItems="center">
             <Typography variant="body2">
-              Selected: {selectedCell.value}% (Row:{" "}
-              {mockGrants.find((g) => g.id === selectedCell.rowId)?.name}, Date:{" "}
+              Selected: {selectedCell.value}h (Date:{" "}
               {format(new Date(selectedCell.columnId), "MMM dd")})
             </Typography>
             <Button
@@ -336,7 +626,7 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({
 
       <Box className="timesheet-grid">
         <ReactGrid
-          stickyLeftColumns={1}
+          stickyLeftColumns={5}
           rows={rows}
           columns={columns}
           onCellsChanged={handleChanges}
@@ -362,6 +652,20 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({
           {error}
         </Alert>
       </Snackbar>
+
+      {/* Bulk Allocation Modal */}
+      <BulkAllocationModal
+        open={bulkAllocationModalOpen}
+        onClose={() => setBulkAllocationModalOpen(false)}
+        userId={userId}
+        userName={individual ? `${individual.FirstName} ${individual.LastName}` : 'User'}
+        initialStartDate={periodStart}
+        initialEndDate={periodEnd}
+        onAllocationComplete={() => {
+          // Force refresh of timesheet data
+          refetch();
+        }}
+      />
     </>
   );
 
