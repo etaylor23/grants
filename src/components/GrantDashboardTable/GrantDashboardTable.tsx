@@ -29,6 +29,10 @@ interface GrantDashboardTableProps {
   timeSlots: TimeSlot[];
   individuals: Individual[];
   periodType: PeriodType;
+  dateRangeFilter?: {
+    startDate: Date;
+    endDate: Date;
+  };
 }
 
 export const GrantDashboardTable: React.FC<GrantDashboardTableProps> = ({
@@ -36,6 +40,7 @@ export const GrantDashboardTable: React.FC<GrantDashboardTableProps> = ({
   timeSlots,
   individuals,
   periodType,
+  dateRangeFilter,
 }) => {
   // Modal state for drill-down
   const [modalOpen, setModalOpen] = useState(false);
@@ -78,11 +83,15 @@ export const GrantDashboardTable: React.FC<GrantDashboardTableProps> = ({
       })),
       periodType,
       dateRange: {
-        startDate: grant.StartDate,
-        endDate: grant.EndDate,
+        startDate: dateRangeFilter
+          ? dateRangeFilter.startDate.toISOString().split("T")[0]
+          : grant.StartDate,
+        endDate: dateRangeFilter
+          ? dateRangeFilter.endDate.toISOString().split("T")[0]
+          : grant.EndDate,
       },
     };
-  }, [grant, timeSlots, individuals, periodType]);
+  }, [grant, timeSlots, individuals, periodType, dateRangeFilter]);
 
   // Calculate cost type results
   const costTypeResults = useMemo(() => {

@@ -1,6 +1,16 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { useParams, Navigate } from "react-router-dom";
-import { CircularProgress, Alert, Box } from "@mui/material";
+import {
+  CircularProgress,
+  Alert,
+  Box,
+  ToggleButton,
+  ToggleButtonGroup,
+} from "@mui/material";
+import {
+  CalendarToday as CalendarIcon,
+  Assessment as AssessmentIcon,
+} from "@mui/icons-material";
 import styles from "./GrantView.module.css";
 import { AppLayout } from "../components/Layout/AppLayout";
 import { BreadcrumbNavigation } from "../components/BreadcrumbNavigation";
@@ -23,12 +33,12 @@ export const GrantViewPage: React.FC<GrantViewPageProps> = () => {
     grantId: string;
   }>();
 
-  // Use PeriodSelector for enhanced date range management
-  const { selectedPeriod, handlePeriodChange } = usePeriodSelector("monthly");
+  // Use PeriodSelector for enhanced date range filtering
+  const { selectedPeriod, selectedPeriodOption, handlePeriodChange } =
+    usePeriodSelector("monthly");
 
-  // Convert period selector to PeriodType for the dashboard table
-  const periodType: PeriodType =
-    selectedPeriod === "quarterly" ? "quarterly" : "monthly";
+  // Separate state for data grouping (Monthly vs Quarterly display)
+  const [periodType, setPeriodType] = useState<PeriodType>("monthly");
 
   // Data hooks
   const {
@@ -89,6 +99,16 @@ export const GrantViewPage: React.FC<GrantViewPageProps> = () => {
     );
   }
 
+  // Handler for data grouping toggle (Monthly vs Quarterly)
+  const handlePeriodTypeChange = (
+    _event: React.MouseEvent<HTMLElement>,
+    newPeriodType: PeriodType | null
+  ) => {
+    if (newPeriodType !== null) {
+      setPeriodType(newPeriodType);
+    }
+  };
+
   const breadcrumbItems = [
     { label: "Home", path: "/" },
     { label: "Organisations", path: "/organisations" },
@@ -117,13 +137,9 @@ export const GrantViewPage: React.FC<GrantViewPageProps> = () => {
 
         {/* Header */}
         <div className={styles.headerSection}>
-          <h1 className={styles.headerTitle}>{grant?.Title}</h1>
-          <p className={styles.headerSubtitle}>
-            Grant Dashboard - {organisation.Name}
-          </p>
-          <div className={styles.headerBadge}>
-            📊 Detailed grant analysis and cost breakdown
-          </div>
+          <h1 className={styles.headerTitle}>
+            {organisation.Name} - {grant?.Title}
+          </h1>
         </div>
 
         {/* Period Selector */}
@@ -137,13 +153,45 @@ export const GrantViewPage: React.FC<GrantViewPageProps> = () => {
               id="period-selector-heading"
               className={styles.periodSelectorLabel}
             >
-              Time Period View:
+              Date Range Filter:
             </h3>
             <PeriodSelector
               selectedPeriod={selectedPeriod}
               onPeriodChange={handlePeriodChange}
               className={styles.periodSelector}
             />
+          </div>
+
+          {/* Data Grouping Controls */}
+          <div className={styles.periodSelectorContent}>
+            <h3
+              id="grouping-selector-heading"
+              className={styles.periodSelectorLabel}
+            >
+              Data Grouping:
+            </h3>
+            <ToggleButtonGroup
+              value={periodType}
+              exclusive
+              onChange={handlePeriodTypeChange}
+              aria-label="Select data grouping for grant analysis"
+              size="small"
+            >
+              <ToggleButton
+                value="monthly"
+                aria-label="Group data by monthly periods"
+              >
+                <CalendarIcon sx={{ mr: 1 }} aria-hidden="true" />
+                Monthly
+              </ToggleButton>
+              <ToggleButton
+                value="quarterly"
+                aria-label="Group data by quarterly periods"
+              >
+                <AssessmentIcon sx={{ mr: 1 }} aria-hidden="true" />
+                Quarterly
+              </ToggleButton>
+            </ToggleButtonGroup>
           </div>
         </div>
 
@@ -154,6 +202,14 @@ export const GrantViewPage: React.FC<GrantViewPageProps> = () => {
             timeSlots={timeSlots}
             individuals={individuals}
             periodType={periodType}
+            dateRangeFilter={
+              selectedPeriodOption
+                ? {
+                    startDate: selectedPeriodOption.startDate,
+                    endDate: selectedPeriodOption.endDate,
+                  }
+                : undefined
+            }
           />
         )}
       </div>
