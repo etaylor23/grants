@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from "react";
 import {
   FormControl,
   InputLabel,
@@ -10,12 +10,12 @@ import {
   Alert,
   SelectChangeEvent,
   Button,
-  Divider
-} from '@mui/material';
-import { Person as PersonIcon, Add as AddIcon } from '@mui/icons-material';
-import { useIndividuals, useOrganisations } from '../../hooks/useLocalData';
-import { Individual } from '../../db/schema';
-import { CreateUserModal } from '../CreateUserModal';
+  Divider,
+} from "@mui/material";
+import { Person as PersonIcon, Add as AddIcon } from "@mui/icons-material";
+import { useIndividuals, useOrganisations } from "../../hooks/useLocalData";
+import { Individual } from "../../db/schema";
+import { CreateUserModal } from "../CreateUserModal";
 
 interface UserPickerProps {
   selectedUserId: string | null;
@@ -28,11 +28,17 @@ export const UserPicker: React.FC<UserPickerProps> = ({
   selectedUserId,
   onUserChange,
   className,
-  organisationId
+  organisationId,
 }) => {
-  const { data: individuals = [], isLoading, error } = useIndividuals(organisationId);
+  const {
+    data: individuals = [],
+    isLoading,
+    error,
+  } = useIndividuals(organisationId);
   const { data: organisations = [] } = useOrganisations();
-  const [localSelectedUserId, setLocalSelectedUserId] = useState<string>(selectedUserId || '');
+  const [localSelectedUserId, setLocalSelectedUserId] = useState<string>(
+    selectedUserId || ""
+  );
   const [createUserModalOpen, setCreateUserModalOpen] = useState(false);
 
   // Create organisation lookup
@@ -45,7 +51,7 @@ export const UserPicker: React.FC<UserPickerProps> = ({
 
   // Update local state when prop changes
   useEffect(() => {
-    setLocalSelectedUserId(selectedUserId || '');
+    setLocalSelectedUserId(selectedUserId || "");
   }, [selectedUserId]);
 
   // Auto-select first user if none selected and users are available
@@ -60,12 +66,12 @@ export const UserPicker: React.FC<UserPickerProps> = ({
   const handleChange = (event: SelectChangeEvent<string>) => {
     const userId = event.target.value;
 
-    if (userId === 'CREATE_NEW') {
+    if (userId === "CREATE_NEW") {
       setCreateUserModalOpen(true);
       return;
     }
 
-    const user = individuals.find(u => u.PK === userId);
+    const user = individuals.find((u) => u.PK === userId);
 
     if (user) {
       setLocalSelectedUserId(userId);
@@ -73,9 +79,9 @@ export const UserPicker: React.FC<UserPickerProps> = ({
 
       // Persist selection in localStorage
       try {
-        localStorage.setItem('selectedUserId', userId);
+        localStorage.setItem("selectedUserId", userId);
       } catch (error) {
-        console.warn('Failed to save user selection to localStorage:', error);
+        console.warn("Failed to save user selection to localStorage:", error);
       }
     }
   };
@@ -89,9 +95,9 @@ export const UserPicker: React.FC<UserPickerProps> = ({
   useEffect(() => {
     if (!selectedUserId && individuals.length > 0) {
       try {
-        const savedUserId = localStorage.getItem('selectedUserId');
+        const savedUserId = localStorage.getItem("selectedUserId");
         if (savedUserId) {
-          const savedUser = individuals.find(u => u.PK === savedUserId);
+          const savedUser = individuals.find((u) => u.PK === savedUserId);
           if (savedUser) {
             setLocalSelectedUserId(savedUserId);
             onUserChange(savedUserId, savedUser);
@@ -99,7 +105,7 @@ export const UserPicker: React.FC<UserPickerProps> = ({
           }
         }
       } catch (error) {
-        console.warn('Failed to load user selection from localStorage:', error);
+        console.warn("Failed to load user selection from localStorage:", error);
       }
 
       // Fallback to first user
@@ -111,7 +117,9 @@ export const UserPicker: React.FC<UserPickerProps> = ({
 
   if (isLoading) {
     return (
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 200 }}>
+      <Box
+        sx={{ display: "flex", alignItems: "center", gap: 1, minWidth: 200 }}
+      >
         <CircularProgress size={20} />
         <Typography variant="body2" color="text.secondary">
           Loading users...
@@ -128,13 +136,13 @@ export const UserPicker: React.FC<UserPickerProps> = ({
     );
   }
 
-  const selectedUser = individuals.find(u => u.PK === localSelectedUserId);
+  const selectedUser = individuals.find((u) => u.PK === localSelectedUserId);
 
   return (
     <>
       <Box className={className} sx={{ minWidth: 200 }}>
         <FormControl fullWidth size="small">
-          <InputLabel id="user-picker-label" sx={{ color: 'white' }}>
+          <InputLabel id="user-picker-label" sx={{ color: "white" }}>
             Current User
           </InputLabel>
           <Select
@@ -143,26 +151,26 @@ export const UserPicker: React.FC<UserPickerProps> = ({
             onChange={handleChange}
             label="Current User"
             sx={{
-              color: 'white',
-              '& .MuiOutlinedInput-notchedOutline': {
-                borderColor: 'rgba(255, 255, 255, 0.23)',
+              color: "white",
+              "& .MuiOutlinedInput-notchedOutline": {
+                borderColor: "rgba(255, 255, 255, 0.23)",
               },
-              '&:hover .MuiOutlinedInput-notchedOutline': {
-                borderColor: 'rgba(255, 255, 255, 0.5)',
+              "&:hover .MuiOutlinedInput-notchedOutline": {
+                borderColor: "rgba(255, 255, 255, 0.5)",
               },
-              '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                borderColor: 'white',
+              "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
+                borderColor: "white",
               },
-              '& .MuiSvgIcon-root': {
-                color: 'white',
+              "& .MuiSvgIcon-root": {
+                color: "white",
               },
             }}
             MenuProps={{
               PaperProps: {
                 sx: {
                   maxHeight: 300,
-                  '& .MuiMenuItem-root': {
-                    padding: '8px 16px',
+                  "& .MuiMenuItem-root": {
+                    padding: "8px 16px",
                   },
                 },
               },
@@ -170,17 +178,29 @@ export const UserPicker: React.FC<UserPickerProps> = ({
           >
             {individuals.map((individual) => (
               <MenuItem key={individual.PK} value={individual.PK}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%' }}>
-                  <PersonIcon sx={{ color: 'action.active', fontSize: 20 }} />
+                <Box
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 1,
+                    width: "100%",
+                  }}
+                >
+                  <PersonIcon sx={{ color: "action.active", fontSize: 20 }} />
                   <Box sx={{ flex: 1 }}>
                     <Typography variant="body2" sx={{ fontWeight: 500 }}>
                       {individual.FirstName} {individual.LastName}
                     </Typography>
                     <Typography variant="caption" color="text.secondary">
-                      {individual.PK} • £{individual.AnnualGross.toLocaleString()}/year
-                      {individual.OrganisationID && organisationsMap[individual.OrganisationID] && (
-                        <> • {organisationsMap[individual.OrganisationID].Name}</>
-                      )}
+                      {individual.PK} • £
+                      {individual.AnnualGross.toLocaleString()}/year
+                      {individual.OrganisationID &&
+                        organisationsMap[individual.OrganisationID] && (
+                          <>
+                            {" "}
+                            • {organisationsMap[individual.OrganisationID].Name}
+                          </>
+                        )}
                     </Typography>
                   </Box>
                 </Box>
@@ -190,29 +210,25 @@ export const UserPicker: React.FC<UserPickerProps> = ({
             <Divider />
 
             <MenuItem value="CREATE_NEW">
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%' }}>
-                <AddIcon sx={{ color: 'primary.main', fontSize: 20 }} />
-                <Typography variant="body2" sx={{ fontWeight: 500, color: 'primary.main' }}>
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 1,
+                  width: "100%",
+                }}
+              >
+                <AddIcon sx={{ color: "primary.main", fontSize: 20 }} />
+                <Typography
+                  variant="body2"
+                  sx={{ fontWeight: 500, color: "primary.main" }}
+                >
                   Create New User
                 </Typography>
               </Box>
             </MenuItem>
           </Select>
         </FormControl>
-
-        {selectedUser && (
-          <Typography
-            variant="caption"
-            sx={{
-              color: 'rgba(255, 255, 255, 0.7)',
-              display: 'block',
-              mt: 0.5,
-              textAlign: 'center'
-            }}
-          >
-            {selectedUser.FirstName} {selectedUser.LastName}
-          </Typography>
-        )}
       </Box>
 
       <CreateUserModal

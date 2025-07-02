@@ -27,7 +27,6 @@ import {
 } from "@mui/icons-material";
 import { format, parseISO, isAfter, isBefore } from "date-fns";
 import { AppLayout } from "../components/Layout/AppLayout";
-import { BreadcrumbNavigation } from "../components/BreadcrumbNavigation";
 import { CreateGrantModal } from "../components/CreateGrantModal";
 import { ImpactAnalysisModal } from "../components/ImpactAnalysisModal";
 import {
@@ -91,14 +90,18 @@ export const OrganisationGrantsPage: React.FC = () => {
   const [impactAnalysisOpen, setImpactAnalysisOpen] = useState(false);
   const [dateChangeImpact, setDateChangeImpact] = useState<any>(null);
 
-  const { data: allGrants = [] } = useGrants();
-  const { data: individuals = [] } = useIndividuals();
-  const { data: organisations = [] } = useOrganisations();
+  const { data: allGrants = [], isLoading: grantsLoading } = useGrants();
+  const { data: individuals = [], isLoading: individualsLoading } =
+    useIndividuals();
+  const { data: organisations = [], isLoading: orgsLoading } =
+    useOrganisations();
 
   // Find organisation by company number
   const organisation = organisations.find(
     (org) => org.CompanyNumber === orgNumber
   );
+
+  const isLoading = orgsLoading || grantsLoading || individualsLoading;
 
   // Filter grants by organisation
   const grants = useMemo(() => {
@@ -124,8 +127,28 @@ export const OrganisationGrantsPage: React.FC = () => {
     }, {} as Record<string, Individual>);
   }, [individuals]);
 
-  if (!organisation) {
+  // Only redirect if data has finished loading and organisation is still not found
+  if (!orgsLoading && !organisation) {
     return <Navigate to="/organisations" replace />;
+  }
+
+  // Show loading state while data is being fetched
+  if (isLoading || !organisation) {
+    return (
+      <AppLayout>
+        <Box
+          sx={{
+            p: 3,
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            minHeight: "200px",
+          }}
+        >
+          <Typography>Loading organisation grants...</Typography>
+        </Box>
+      </AppLayout>
+    );
   }
 
   const handleEditStart = (grant: Grant) => {
@@ -177,15 +200,6 @@ export const OrganisationGrantsPage: React.FC = () => {
   return (
     <AppLayout>
       <Box sx={{ p: 3 }}>
-        <BreadcrumbNavigation
-          items={[
-            { label: "Home", path: "/" },
-            { label: "Organisations", path: "/organisations" },
-            { label: organisation.Name, path: `/organisation/${orgNumber}` },
-            { label: "Grants", path: `/organisation/${orgNumber}/grants` },
-          ]}
-        />
-
         {/* Header */}
         <Box
           sx={{
@@ -198,23 +212,6 @@ export const OrganisationGrantsPage: React.FC = () => {
           <Box>
             <Typography variant="h4" sx={{ fontWeight: 600, mb: 1 }}>
               Organization Grants - {organisation.Name}
-            </Typography>
-            <Typography variant="body1" color="text.secondary">
-              Manage grants for this organization only
-            </Typography>
-            <Typography
-              variant="body2"
-              sx={{
-                mt: 1,
-                p: 1,
-                backgroundColor: "#e8f5e8",
-                borderRadius: 1,
-                color: "#2e7d32",
-                fontWeight: 500,
-                display: "inline-block",
-              }}
-            >
-              🏢 Organization-Filtered View: {organisation.Name} grants only
             </Typography>
           </Box>
           <Button
@@ -365,14 +362,20 @@ export const OrganisationGrantsPage: React.FC = () => {
                           <IconButton
                             size="small"
                             color="primary"
-                            onClick={handleEditSave}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleEditSave();
+                            }}
                           >
                             <SaveIcon />
                           </IconButton>
                           <IconButton
                             size="small"
                             color="secondary"
-                            onClick={handleEditCancel}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleEditCancel();
+                            }}
                           >
                             <CancelIcon />
                           </IconButton>
@@ -381,7 +384,10 @@ export const OrganisationGrantsPage: React.FC = () => {
                         <IconButton
                           size="small"
                           color="primary"
-                          onClick={() => handleEditStart(grant)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleEditStart(grant);
+                          }}
                         >
                           <EditIcon />
                         </IconButton>

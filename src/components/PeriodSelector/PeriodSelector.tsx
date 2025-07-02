@@ -30,6 +30,7 @@ import {
   addMonths,
   format,
 } from "date-fns";
+import { PeriodType } from "../../models/grantDashboard";
 
 export interface PeriodOption {
   id: string;
@@ -45,12 +46,21 @@ export interface PeriodSelectorProps {
   selectedPeriod: string;
   onPeriodChange: (periodId: string, period: PeriodOption) => void;
   className?: string;
+  // Optional grouping information to display in Selected Period Info
+  currentGrouping?: {
+    periodType: PeriodType;
+    label: string;
+  };
+  // Optional grouping controls to display inline
+  groupingControls?: React.ReactNode;
 }
 
 export const PeriodSelector: React.FC<PeriodSelectorProps> = ({
   selectedPeriod,
   onPeriodChange,
   className,
+  currentGrouping,
+  groupingControls,
 }) => {
   const [customRangeOpen, setCustomRangeOpen] = useState(false);
   const [customStartDate, setCustomStartDate] = useState("");
@@ -63,7 +73,7 @@ export const PeriodSelector: React.FC<PeriodSelectorProps> = ({
     return [
       {
         id: "monthly",
-        label: "Monthly",
+        label: "Current Month",
         shortLabel: "Month",
         startDate: currentMonthStart,
         endDate: currentMonthEnd,
@@ -72,7 +82,7 @@ export const PeriodSelector: React.FC<PeriodSelectorProps> = ({
       },
       {
         id: "3months",
-        label: "3 Months",
+        label: "Next 3 Months",
         shortLabel: "3M",
         startDate: currentMonthStart,
         endDate: endOfMonth(addMonths(currentMonthStart, 2)),
@@ -84,7 +94,7 @@ export const PeriodSelector: React.FC<PeriodSelectorProps> = ({
       },
       {
         id: "6months",
-        label: "6 Months",
+        label: "Next 6 Months",
         shortLabel: "6M",
         startDate: currentMonthStart,
         endDate: endOfMonth(addMonths(currentMonthStart, 5)),
@@ -200,87 +210,113 @@ export const PeriodSelector: React.FC<PeriodSelectorProps> = ({
 
   return (
     <Box className={className} sx={{ mb: 3 }}>
-      {/* Period Selection */}
+      {/* Horizontal Inline Layout for Period Selection and Grouping Controls */}
       <Box
         sx={{
           display: "flex",
-          flexDirection: { xs: "column", sm: "row" },
-          alignItems: { xs: "stretch", sm: "center" },
-          justifyContent: "space-between",
-          gap: 2,
+          flexDirection: { xs: "column", lg: "row" },
+          gap: { xs: 2, lg: 2 },
           mb: 2,
+          maxWidth: "100%",
+          overflow: "hidden",
+          "@media (max-width: 950px)": {
+            flexDirection: "column",
+            gap: 2,
+          },
         }}
       >
-        <Box>
-          <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
+        {/* Time Period Section */}
+        <Box sx={{ flex: 1 }}>
+          <Typography
+            variant="h6"
+            sx={{
+              fontWeight: 600,
+              mb: 1.5,
+              textAlign: { xs: "left", md: "left" },
+            }}
+          >
             Time Period
           </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Select the time range for calendar and timesheet views
-          </Typography>
-        </Box>
-
-        <ToggleButtonGroup
-          value={selectedPeriod}
-          exclusive
-          onChange={handlePeriodChange}
-          aria-label="time period selection"
-          size="small"
-          sx={{
-            "& .MuiToggleButton-root": {
-              px: 2,
-              py: 1,
-              border: "1px solid #e0e0e0",
-              "&.Mui-selected": {
-                backgroundColor: "#1976d2",
-                color: "white",
+          <ToggleButtonGroup
+            value={selectedPeriod}
+            exclusive
+            onChange={handlePeriodChange}
+            aria-label="time period selection"
+            size="small"
+            sx={{
+              "& .MuiToggleButton-root": {
+                px: 1.5,
+                py: 0.75,
+                fontSize: "0.8rem",
+                border: "1px solid #e0e0e0",
+                "&.Mui-selected": {
+                  backgroundColor: "#1976d2",
+                  color: "white",
+                  "&:hover": {
+                    backgroundColor: "#1565c0",
+                  },
+                },
                 "&:hover": {
-                  backgroundColor: "#1565c0",
+                  backgroundColor: "#f5f5f5",
                 },
               },
-              "&:hover": {
-                backgroundColor: "#f5f5f5",
-              },
-            },
-          }}
-        >
-          {periodOptions.map((option) => (
-            <ToggleButton
-              key={option.id}
-              value={option.id}
-              aria-label={option.label}
-            >
-              <Box
-                sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 0.5,
-                  flexDirection: { xs: "column", sm: "row" },
-                }}
+            }}
+          >
+            {periodOptions.map((option) => (
+              <ToggleButton
+                key={option.id}
+                value={option.id}
+                aria-label={option.label}
               >
-                {option.icon}
-                <Typography
-                  variant="caption"
+                <Box
                   sx={{
-                    display: { xs: "block", sm: "none" },
-                    fontSize: "0.7rem",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 0.5,
+                    flexDirection: { xs: "column", sm: "row" },
                   }}
                 >
-                  {option.shortLabel}
-                </Typography>
-                <Typography
-                  variant="body2"
-                  sx={{
-                    display: { xs: "none", sm: "block" },
-                    fontWeight: 500,
-                  }}
-                >
-                  {option.label}
-                </Typography>
-              </Box>
-            </ToggleButton>
-          ))}
-        </ToggleButtonGroup>
+                  {option.icon}
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      display: { xs: "block", sm: "none" },
+                      fontSize: "0.7rem",
+                    }}
+                  >
+                    {option.shortLabel}
+                  </Typography>
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      display: { xs: "none", sm: "block" },
+                      fontWeight: 500,
+                      fontSize: "0.8rem",
+                    }}
+                  >
+                    {option.label}
+                  </Typography>
+                </Box>
+              </ToggleButton>
+            ))}
+          </ToggleButtonGroup>
+        </Box>
+
+        {/* Data Grouping Section */}
+        {groupingControls && (
+          <Box
+            sx={{
+              flex: "0 1 auto",
+              maxWidth: "100%",
+              minWidth: 0,
+              "@media (max-width: 950px)": {
+                width: "100%",
+              },
+            }}
+          >
+            {groupingControls}
+          </Box>
+        )}
       </Box>
 
       {/* Selected Period Info */}
@@ -302,7 +338,7 @@ export const PeriodSelector: React.FC<PeriodSelectorProps> = ({
             color="primary"
             variant="filled"
           />
-          <Box>
+          <Box sx={{ flex: 1 }}>
             <Typography variant="body2" sx={{ fontWeight: 500 }}>
               {selectedPeriodOption.description}
             </Typography>
@@ -311,6 +347,16 @@ export const PeriodSelector: React.FC<PeriodSelectorProps> = ({
               {format(selectedPeriodOption.endDate, "MMM dd, yyyy")}
             </Typography>
           </Box>
+          {currentGrouping && (
+            <Box sx={{ textAlign: "right" }}>
+              <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                Data Grouping
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                {currentGrouping.label}
+              </Typography>
+            </Box>
+          )}
         </Box>
       )}
 

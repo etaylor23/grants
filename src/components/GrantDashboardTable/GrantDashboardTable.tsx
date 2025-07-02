@@ -255,9 +255,6 @@ export const GrantDashboardTable: React.FC<GrantDashboardTableProps> = ({
         <h2 id="grant-table-heading" className={styles.dashboardTableTitle}>
           Grant Cost Breakdown
         </h2>
-        <p className={styles.dashboardTableDescription}>
-          Detailed analysis of costs by category and time period
-        </p>
       </div>
 
       <TableContainer>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   Box,
   Typography,
@@ -12,20 +12,20 @@ import {
   IconButton,
   TextField,
   Button,
-} from '@mui/material';
+} from "@mui/material";
 import {
   Edit as EditIcon,
   Save as SaveIcon,
   Cancel as CancelIcon,
   Add as AddIcon,
   Visibility as ViewIcon,
-} from '@mui/icons-material';
-import { format, parseISO } from 'date-fns';
-import { useNavigate } from 'react-router-dom';
-import { AppLayout } from '../components/Layout/AppLayout';
-import { CreateOrganisationModal } from '../components/CreateOrganisationModal';
-import { useOrganisations } from '../hooks/useLocalData';
-import { Organisation } from '../db/schema';
+} from "@mui/icons-material";
+import { format, parseISO } from "date-fns";
+import { useNavigate } from "react-router-dom";
+import { AppLayout } from "../components/Layout/AppLayout";
+import { CreateOrganisationModal } from "../components/CreateOrganisationModal";
+import { useOrganisations } from "../hooks/useLocalData";
+import { Organisation } from "../db/schema";
 
 interface EditingOrganisation {
   PK: string;
@@ -36,14 +36,18 @@ interface EditingOrganisation {
 
 export const OrganisationsListPage: React.FC = () => {
   const navigate = useNavigate();
-  const [createOrganisationModalOpen, setCreateOrganisationModalOpen] = useState(false);
-  const [editingOrganisationId, setEditingOrganisationId] = useState<string | null>(null);
-  const [editingOrganisation, setEditingOrganisation] = useState<EditingOrganisation | null>(null);
+  const [createOrganisationModalOpen, setCreateOrganisationModalOpen] =
+    useState(false);
+  const [editingOrganisationId, setEditingOrganisationId] = useState<
+    string | null
+  >(null);
+  const [editingOrganisation, setEditingOrganisation] =
+    useState<EditingOrganisation | null>(null);
 
   const { data: organisations = [] } = useOrganisations();
 
   // Debug logging
-  console.log('OrganisationsListPage - organisations data:', organisations);
+  console.log("OrganisationsListPage - organisations data:", organisations);
 
   const handleEditStart = (organisation: Organisation) => {
     setEditingOrganisationId(organisation.PK);
@@ -64,22 +68,25 @@ export const OrganisationsListPage: React.FC = () => {
     if (!editingOrganisation) return;
 
     try {
-      const { db } = await import('../db/schema');
+      const { db } = await import("../db/schema");
       await db.organisations.put(editingOrganisation as Organisation);
-      
+
       setEditingOrganisationId(null);
       setEditingOrganisation(null);
-      
+
       // Refresh organisations data
       window.location.reload(); // Temporary - should use query invalidation
     } catch (error) {
-      console.error('Failed to save organisation:', error);
+      console.error("Failed to save organisation:", error);
     }
   };
 
-  const handleInputChange = (field: keyof EditingOrganisation, value: string) => {
+  const handleInputChange = (
+    field: keyof EditingOrganisation,
+    value: string
+  ) => {
     if (!editingOrganisation) return;
-    
+
     setEditingOrganisation({
       ...editingOrganisation,
       [field]: value,
@@ -88,15 +95,15 @@ export const OrganisationsListPage: React.FC = () => {
 
   const formatDate = (dateString: string): string => {
     try {
-      return format(parseISO(dateString), 'dd MMM yyyy');
+      return format(parseISO(dateString), "dd MMM yyyy");
     } catch (error) {
       return dateString;
     }
   };
 
   const handleViewOrganisation = (organisation: Organisation) => {
-    console.log('Navigating to organisation:', organisation);
-    console.log('URL will be:', `/organisation/${organisation.CompanyNumber}`);
+    console.log("Navigating to organisation:", organisation);
+    console.log("URL will be:", `/organisation/${organisation.CompanyNumber}`);
     navigate(`/organisation/${organisation.CompanyNumber}`);
   };
 
@@ -104,18 +111,17 @@ export const OrganisationsListPage: React.FC = () => {
     <AppLayout>
       <Box sx={{ p: 3 }}>
         {/* Header */}
-        <Box sx={{ 
-          display: 'flex', 
-          justifyContent: 'space-between', 
-          alignItems: 'center', 
-          mb: 3 
-        }}>
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            mb: 3,
+          }}
+        >
           <Box>
             <Typography variant="h4" sx={{ fontWeight: 600, mb: 1 }}>
               Organisations Management
-            </Typography>
-            <Typography variant="body1" color="text.secondary">
-              View and manage all organisations in the system
             </Typography>
           </Box>
           <Button
@@ -131,8 +137,10 @@ export const OrganisationsListPage: React.FC = () => {
         <TableContainer component={Paper} sx={{ borderRadius: 2 }}>
           <Table>
             <TableHead>
-              <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
-                <TableCell sx={{ fontWeight: 600 }}>Organisation Name</TableCell>
+              <TableRow sx={{ backgroundColor: "#f5f5f5" }}>
+                <TableCell sx={{ fontWeight: 600 }}>
+                  Organisation Name
+                </TableCell>
                 <TableCell sx={{ fontWeight: 600 }}>Company Number</TableCell>
                 <TableCell sx={{ fontWeight: 600 }}>Created Date</TableCell>
                 <TableCell sx={{ fontWeight: 600 }}>Actions</TableCell>
@@ -149,8 +157,10 @@ export const OrganisationsListPage: React.FC = () => {
                         <TextField
                           fullWidth
                           size="small"
-                          value={editingOrganisation?.Name || ''}
-                          onChange={(e) => handleInputChange('Name', e.target.value)}
+                          value={editingOrganisation?.Name || ""}
+                          onChange={(e) =>
+                            handleInputChange("Name", e.target.value)
+                          }
                         />
                       ) : (
                         organisation.Name
@@ -161,8 +171,10 @@ export const OrganisationsListPage: React.FC = () => {
                         <TextField
                           fullWidth
                           size="small"
-                          value={editingOrganisation?.CompanyNumber || ''}
-                          onChange={(e) => handleInputChange('CompanyNumber', e.target.value)}
+                          value={editingOrganisation?.CompanyNumber || ""}
+                          onChange={(e) =>
+                            handleInputChange("CompanyNumber", e.target.value)
+                          }
                         />
                       ) : (
                         organisation.CompanyNumber
@@ -173,7 +185,7 @@ export const OrganisationsListPage: React.FC = () => {
                     </TableCell>
                     <TableCell>
                       {isEditing ? (
-                        <Box sx={{ display: 'flex', gap: 1 }}>
+                        <Box sx={{ display: "flex", gap: 1 }}>
                           <IconButton
                             size="small"
                             color="primary"
@@ -190,7 +202,9 @@ export const OrganisationsListPage: React.FC = () => {
                           </IconButton>
                         </Box>
                       ) : (
-                        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                        <Box
+                          sx={{ display: "flex", gap: 1, alignItems: "center" }}
+                        >
                           <Button
                             variant="contained"
                             size="small"
@@ -216,8 +230,12 @@ export const OrganisationsListPage: React.FC = () => {
               })}
               {organisations.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={4} sx={{ textAlign: 'center', py: 4 }}>
-                    <Typography variant="h6" color="text.secondary" sx={{ mb: 1 }}>
+                  <TableCell colSpan={4} sx={{ textAlign: "center", py: 4 }}>
+                    <Typography
+                      variant="h6"
+                      color="text.secondary"
+                      sx={{ mb: 1 }}
+                    >
                       No organisations found
                     </Typography>
                     <Typography variant="body2" color="text.secondary">

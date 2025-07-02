@@ -3,18 +3,19 @@ import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
-import {
-  Box,
-  Typography,
-  Button,
-  Alert,
-} from "@mui/material";
+import { Box, Typography, Button, Alert } from "@mui/material";
 import {
   useWorkdayHours,
   useTimeSlots,
   useGrants,
 } from "../../hooks/useLocalData";
-import { format, startOfMonth, endOfMonth, addMonths, subMonths } from "date-fns";
+import {
+  format,
+  startOfMonth,
+  endOfMonth,
+  addMonths,
+  subMonths,
+} from "date-fns";
 import { generateUserColor } from "../../utils/colors";
 import { EnhancedTimesheetModal } from "../EnhancedTimesheetModal";
 import styles from "../Layout/ModernContainer.module.css";
@@ -54,7 +55,7 @@ export const LocalCalendarView: React.FC<LocalCalendarViewProps> = ({
   console.log("LocalCalendarView data:", {
     userId,
     userName,
-    currentDate: format(currentDate, 'yyyy-MM-dd'),
+    currentDate: format(currentDate, "yyyy-MM-dd"),
     periodStart,
     periodEnd,
     year,
@@ -75,7 +76,7 @@ export const LocalCalendarView: React.FC<LocalCalendarViewProps> = ({
       workdayHoursEntries: Object.entries(workdayHours),
       timeSlots,
       userName,
-      userColor
+      userColor,
     });
 
     // Create events for each workday
@@ -85,10 +86,15 @@ export const LocalCalendarView: React.FC<LocalCalendarViewProps> = ({
       if (hours > 0) {
         // Find time slots for this date
         const daySlots = timeSlots.filter((slot: any) => slot.Date === date);
-        const totalHours = daySlots.reduce((sum, slot: any) => sum + (slot.HoursAllocated || 0), 0);
+        const totalHours = daySlots.reduce(
+          (sum, slot: any) => sum + (slot.HoursAllocated || 0),
+          0
+        );
         const totalPercent = Math.round((totalHours / hours) * 100);
 
-        console.log(`Date ${date}: ${daySlots.length} slots, ${totalHours}h total`);
+        console.log(
+          `Date ${date}: ${daySlots.length} slots, ${totalHours}h total`
+        );
 
         const event = {
           id: `workday-${userId}-${date}`,
@@ -119,9 +125,15 @@ export const LocalCalendarView: React.FC<LocalCalendarViewProps> = ({
 
       // Create test events for the first few days of the period
       const testDates = [
-        format(currentMonth, 'yyyy-MM-dd'),
-        format(new Date(currentMonth.getTime() + 24 * 60 * 60 * 1000), 'yyyy-MM-dd'),
-        format(new Date(currentMonth.getTime() + 2 * 24 * 60 * 60 * 1000), 'yyyy-MM-dd'),
+        format(currentMonth, "yyyy-MM-dd"),
+        format(
+          new Date(currentMonth.getTime() + 24 * 60 * 60 * 1000),
+          "yyyy-MM-dd"
+        ),
+        format(
+          new Date(currentMonth.getTime() + 2 * 24 * 60 * 60 * 1000),
+          "yyyy-MM-dd"
+        ),
       ];
 
       testDates.forEach((date, index) => {
@@ -149,18 +161,21 @@ export const LocalCalendarView: React.FC<LocalCalendarViewProps> = ({
       console.log(`Created ${testDates.length} test events`);
     }
 
-    console.log(`Final events count: ${events.length} for ${userName}:`, events);
+    console.log(
+      `Final events count: ${events.length} for ${userName}:`,
+      events
+    );
     return events;
   }, [userId, userName, workdayHours, timeSlots]);
 
   // Calendar view configuration (unconstrained)
   const calendarViewConfig = useMemo(() => {
     return {
-      initialView: 'dayGridMonth',
+      initialView: "dayGridMonth",
       headerToolbar: {
-        left: 'prev,next today',
-        center: 'title',
-        right: 'dayGridMonth,dayGridWeek,listMonth',
+        left: "prev,next today",
+        center: "title",
+        right: "dayGridMonth,dayGridWeek,listMonth",
       },
       height: 700,
     };
@@ -208,13 +223,16 @@ export const LocalCalendarView: React.FC<LocalCalendarViewProps> = ({
       if (!existingHours || existingHours === 0) {
         // Create a default workday entry (8 hours)
         console.log("Creating workday entry for:", dateStr);
-        const { db, generateWorkdayHoursKey } = await import('../../db/schema');
+        const { db, generateWorkdayHoursKey } = await import("../../db/schema");
 
         const year = new Date(dateStr).getFullYear();
         const workdayHoursKey = generateWorkdayHoursKey(userId, year);
 
         // Get existing workday hours record for this year
-        const existingRecord = await db.workdayHours.get([userId, workdayHoursKey]);
+        const existingRecord = await db.workdayHours.get([
+          userId,
+          workdayHoursKey,
+        ]);
 
         if (existingRecord) {
           // Update existing record
@@ -237,7 +255,6 @@ export const LocalCalendarView: React.FC<LocalCalendarViewProps> = ({
 
       // Open timesheet modal for this date
       setTimesheetModalOpen(true);
-
     } catch (error) {
       console.error("❌ Failed to create workday entry:", error);
     }
@@ -267,7 +284,7 @@ export const LocalCalendarView: React.FC<LocalCalendarViewProps> = ({
   const handleDebugSeed = async () => {
     try {
       console.log("🌱 Manually seeding database...");
-      const { seedLocalDynamo } = await import('../../db/seedLocalDynamo');
+      const { seedLocalDynamo } = await import("../../db/seedLocalDynamo");
       await seedLocalDynamo();
       console.log("✅ Database seeded successfully");
 
@@ -282,7 +299,7 @@ export const LocalCalendarView: React.FC<LocalCalendarViewProps> = ({
   const handleDebugDatabase = async () => {
     try {
       console.log("🔍 Checking database contents...");
-      const { db } = await import('../../db/schema');
+      const { db } = await import("../../db/schema");
 
       const individuals = await db.individuals.toArray();
       const grants = await db.grants.toArray();
@@ -303,64 +320,25 @@ export const LocalCalendarView: React.FC<LocalCalendarViewProps> = ({
       console.log("📅 Workdays:", workdays);
       console.log("⏰ Workday Hours:", workdayHours);
       console.log("🎯 Time Slots:", timeslots);
-
     } catch (error) {
       console.error("❌ Database check failed:", error);
     }
   };
 
   return (
-    <Box sx={{ width: '100%', minHeight: '100vh', p: 2 }}>
+    <Box sx={{ width: "100%", minHeight: "100vh", p: 2 }}>
       {/* Header */}
       <Box sx={{ mb: 3 }}>
         <Typography variant="h4" sx={{ fontWeight: 600, mb: 1 }}>
-          Global Calendar View - {userName}
-        </Typography>
-        <Typography variant="body1" color="text.secondary">
-          Navigate freely through time to view allocations across all organizations
-        </Typography>
-        <Typography variant="body2" sx={{
-          mt: 1,
-          p: 1,
-          backgroundColor: '#e3f2fd',
-          borderRadius: 1,
-          color: '#1976d2',
-          fontWeight: 500
-        }}>
-          📊 Global View: Showing data from all organizations
+          Calendar for {userName}
         </Typography>
       </Box>
 
-      {/* Info Alert */}
-      <Alert severity="info" sx={{ mb: 3 }}>
-        <Typography variant="body2">
-          <strong>How to use:</strong> Click on any calendar day to create a workday entry and open the timesheet. Click on existing workday events to edit allocations.
-          <br />
-          <strong>Event details:</strong> Shows hours allocated vs available hours and percentage utilization.
-          <br />
-          <strong>Debug:</strong>
-          <Button size="small" onClick={handleDebugDatabase} sx={{ ml: 1, mr: 1 }}>
-            Check Database
-          </Button>
-          <Button size="small" onClick={handleDebugSeed} sx={{ mr: 1 }}>
-            Seed Database
-          </Button>
-          Events: {events.length}
-        </Typography>
-      </Alert>
-
       {/* Calendar Section */}
       <Box sx={{ mb: 3 }}>
-        <Typography variant="h5" sx={{ fontWeight: 600, mb: 1 }}>
-          Calendar
-        </Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          {format(currentMonth, "MMMM yyyy")} - Navigate freely through time
-        </Typography>
-
         <Box
           sx={{
-            width: '100%',
+            width: "100%",
             height: calendarViewConfig.height,
             backgroundColor: "#ffffff",
             borderRadius: 2,
@@ -368,7 +346,7 @@ export const LocalCalendarView: React.FC<LocalCalendarViewProps> = ({
             overflow: "hidden",
             "& .fc": {
               fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
-              height: '100%',
+              height: "100%",
             },
             "& .fc-toolbar": {
               padding: "16px 20px",
@@ -439,42 +417,49 @@ export const LocalCalendarView: React.FC<LocalCalendarViewProps> = ({
             height="100%"
             dayMaxEvents={3}
             moreLinkClick="popover"
-                eventContent={(eventInfo) => {
-                  const { daySlots, totalHours, availableHours } = eventInfo.event.extendedProps;
+            eventContent={(eventInfo) => {
+              const { daySlots, totalHours, availableHours } =
+                eventInfo.event.extendedProps;
 
-                  return (
-                    <Box sx={{ p: 0.5, overflow: "hidden" }}>
-                      <Typography variant="caption" sx={{ fontWeight: "bold" }}>
-                        {totalHours}h / {availableHours}h
-                      </Typography>
-                      {daySlots && daySlots.length > 0 && (
-                        <Box sx={{ mt: 0.5 }}>
-                          {daySlots.slice(0, 2).map((slot: any) => {
-                            const grant = grants.find((g: any) => g.PK === slot.GrantID);
-                            return (
-                              <Typography
-                                key={slot.GrantID}
-                                variant="caption"
-                                sx={{
-                                  display: "block",
-                                  fontSize: "0.65rem",
-                                  opacity: 0.9,
-                                }}
-                              >
-                                {grant?.Title || 'Unknown Grant'}: {slot.HoursAllocated}h
-                              </Typography>
-                            );
-                          })}
-                          {daySlots.length > 2 && (
-                            <Typography variant="caption" sx={{ fontSize: "0.65rem", opacity: 0.8 }}>
-                              +{daySlots.length - 2} more...
-                            </Typography>
-                          )}
-                        </Box>
+              return (
+                <Box sx={{ p: 0.5, overflow: "hidden" }}>
+                  <Typography variant="caption" sx={{ fontWeight: "bold" }}>
+                    {totalHours}h / {availableHours}h
+                  </Typography>
+                  {daySlots && daySlots.length > 0 && (
+                    <Box sx={{ mt: 0.5 }}>
+                      {daySlots.slice(0, 2).map((slot: any) => {
+                        const grant = grants.find(
+                          (g: any) => g.PK === slot.GrantID
+                        );
+                        return (
+                          <Typography
+                            key={slot.GrantID}
+                            variant="caption"
+                            sx={{
+                              display: "block",
+                              fontSize: "0.65rem",
+                              opacity: 0.9,
+                            }}
+                          >
+                            {grant?.Title || "Unknown Grant"}:{" "}
+                            {slot.HoursAllocated}h
+                          </Typography>
+                        );
+                      })}
+                      {daySlots.length > 2 && (
+                        <Typography
+                          variant="caption"
+                          sx={{ fontSize: "0.65rem", opacity: 0.8 }}
+                        >
+                          +{daySlots.length - 2} more...
+                        </Typography>
                       )}
                     </Box>
-                  );
-                }}
+                  )}
+                </Box>
+              );
+            }}
           />
         </Box>
       </Box>
@@ -486,6 +471,31 @@ export const LocalCalendarView: React.FC<LocalCalendarViewProps> = ({
         userId={userId}
         userName={userName}
       />
+
+      {/* Info Alert */}
+      <Alert severity="info" sx={{ mb: 3 }}>
+        <Typography variant="body2">
+          <strong>How to use:</strong> Click on any calendar day to create a
+          workday entry and open the timesheet. Click on existing workday events
+          to edit allocations.
+          <br />
+          <strong>Event details:</strong> Shows hours allocated vs available
+          hours and percentage utilization.
+          <br />
+          <strong>Debug:</strong>
+          <Button
+            size="small"
+            onClick={handleDebugDatabase}
+            sx={{ ml: 1, mr: 1 }}
+          >
+            Check Database
+          </Button>
+          <Button size="small" onClick={handleDebugSeed} sx={{ mr: 1 }}>
+            Seed Database
+          </Button>
+          Events: {events.length}
+        </Typography>
+      </Alert>
     </Box>
   );
 };

@@ -1,21 +1,14 @@
 import React, { useMemo, useState } from "react";
 import { useParams, Navigate } from "react-router-dom";
-import {
-  CircularProgress,
-  Alert,
-  Box,
-  ToggleButton,
-  ToggleButtonGroup,
-} from "@mui/material";
-import {
-  CalendarToday as CalendarIcon,
-  Assessment as AssessmentIcon,
-} from "@mui/icons-material";
+import { CircularProgress, Alert, Box } from "@mui/material";
 import styles from "./GrantView.module.css";
 import { AppLayout } from "../components/Layout/AppLayout";
-import { BreadcrumbNavigation } from "../components/BreadcrumbNavigation";
+
 import { GrantDashboardTable } from "../components/GrantDashboardTable";
-import { PeriodSelector } from "../components/PeriodSelector";
+import {
+  PeriodSelector,
+  PeriodGroupingControls,
+} from "../components/PeriodSelector";
 import { usePeriodSelector } from "../hooks/usePeriodSelector";
 import {
   useGrants,
@@ -83,11 +76,31 @@ export const GrantViewPage: React.FC<GrantViewPageProps> = () => {
     );
   }
 
-  if (!organisation) {
+  // Only redirect if data has finished loading and organisation is still not found
+  if (!orgsLoading && !organisation) {
     return <Navigate to="/organisations" replace />;
   }
 
-  if (!isLoading && !grant) {
+  // Show loading state while data is being fetched
+  if (isLoading || !organisation) {
+    return (
+      <AppLayout>
+        <Box
+          sx={{
+            p: 3,
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            minHeight: "200px",
+          }}
+        >
+          <CircularProgress />
+        </Box>
+      </AppLayout>
+    );
+  }
+
+  if (!grant) {
     return (
       <AppLayout>
         <Box sx={{ p: 3 }}>
@@ -109,17 +122,6 @@ export const GrantViewPage: React.FC<GrantViewPageProps> = () => {
     }
   };
 
-  const breadcrumbItems = [
-    { label: "Home", path: "/" },
-    { label: "Organisations", path: "/organisations" },
-    { label: organisation.Name, path: `/organisation/${orgNumber}` },
-    { label: "Grants", path: `/organisation/${orgNumber}/grants` },
-    {
-      label: grant?.Title || "Grant Details",
-      path: `/organisation/${orgNumber}/grants/${grantId}`,
-    },
-  ];
-
   if (isLoading) {
     return (
       <AppLayout>
@@ -133,8 +135,6 @@ export const GrantViewPage: React.FC<GrantViewPageProps> = () => {
   return (
     <AppLayout>
       <div className={styles.pageLayout}>
-        <BreadcrumbNavigation items={breadcrumbItems} />
-
         {/* Header */}
         <div className={styles.headerSection}>
           <h1 className={styles.headerTitle}>
@@ -142,57 +142,28 @@ export const GrantViewPage: React.FC<GrantViewPageProps> = () => {
           </h1>
         </div>
 
-        {/* Period Selector */}
+        {/* Period Selector with Inline Grouping Controls */}
         <div
           className={styles.periodSelector}
           role="region"
           aria-labelledby="period-selector-heading"
         >
-          <div className={styles.periodSelectorContent}>
-            <h3
-              id="period-selector-heading"
-              className={styles.periodSelectorLabel}
-            >
-              Date Range Filter:
-            </h3>
-            <PeriodSelector
-              selectedPeriod={selectedPeriod}
-              onPeriodChange={handlePeriodChange}
-              className={styles.periodSelector}
-            />
-          </div>
-
-          {/* Data Grouping Controls */}
-          <div className={styles.periodSelectorContent}>
-            <h3
-              id="grouping-selector-heading"
-              className={styles.periodSelectorLabel}
-            >
-              Data Grouping:
-            </h3>
-            <ToggleButtonGroup
-              value={periodType}
-              exclusive
-              onChange={handlePeriodTypeChange}
-              aria-label="Select data grouping for grant analysis"
-              size="small"
-            >
-              <ToggleButton
-                value="monthly"
-                aria-label="Group data by monthly periods"
-              >
-                <CalendarIcon sx={{ mr: 1 }} aria-hidden="true" />
-                Monthly
-              </ToggleButton>
-              <ToggleButton
-                value="quarterly"
-                aria-label="Group data by quarterly periods"
-              >
-                <AssessmentIcon sx={{ mr: 1 }} aria-hidden="true" />
-                Quarterly
-              </ToggleButton>
-            </ToggleButtonGroup>
-          </div>
+          <PeriodSelector
+            selectedPeriod={selectedPeriod}
+            onPeriodChange={handlePeriodChange}
+            currentGrouping={{
+              periodType,
+              label: periodType === "monthly" ? "Months" : "Quarters",
+            }}
+            groupingControls={
+              <PeriodGroupingControls
+                periodType={periodType}
+                onPeriodTypeChange={handlePeriodTypeChange}
+                showLabel={true}
+                size="small"
+              />
+            }
+          />
         </div>
 
         {/* Grant Dashboard Table */}

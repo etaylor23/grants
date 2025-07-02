@@ -30,8 +30,9 @@ import {
 // IndexedDB only - no legacy dependencies
 import { ViewMode } from "../../models/types";
 import { UserPicker } from "../UserPicker";
-import { Individual } from "../../db/schema";
+import { Individual, Organisation, Grant } from "../../db/schema";
 import { CreateGrantModal } from "../CreateGrantModal";
+import { HeaderBreadcrumbs } from "../HeaderBreadcrumbs";
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -50,6 +51,8 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
   const [createGrantModalOpen, setCreateGrantModalOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
+
+  // Remove old breadcrumb logic - now handled by HeaderBreadcrumbs component
 
   const toggleDrawer = () => {
     setDrawerOpen(!drawerOpen);
@@ -78,17 +81,37 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
             <MenuIcon />
           </IconButton>
           <Box sx={{ flexGrow: 1 }}>
-            <Typography variant="h6" noWrap component="div" sx={{ fontWeight: 600 }}>
-              GrantGrid
-            </Typography>
-            <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '0.7rem' }}>
-              Your workforce, mapped to funding
-            </Typography>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 3 }}>
+              <Box>
+                <Typography
+                  variant="h6"
+                  noWrap
+                  component="div"
+                  sx={{ fontWeight: 600 }}
+                >
+                  GrantGrid
+                </Typography>
+                <Typography
+                  variant="caption"
+                  sx={{ color: "rgba(255, 255, 255, 0.7)", fontSize: "0.7rem" }}
+                >
+                  Your workforce, mapped to funding
+                </Typography>
+              </Box>
+
+              {/* Breadcrumbs positioned after the title */}
+              <HeaderBreadcrumbs
+                sx={{
+                  ml: 2,
+                  display: { xs: "none", sm: "flex" }, // Hide on mobile to save space
+                }}
+              />
+            </Box>
           </Box>
 
           {/* User Picker and Create Grant Button */}
           {onUserChange && (
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
               <UserPicker
                 selectedUserId={selectedUserId || null}
                 onUserChange={onUserChange}
@@ -101,11 +124,11 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
                 startIcon={<AddIcon />}
                 onClick={() => setCreateGrantModalOpen(true)}
                 sx={{
-                  color: 'white',
-                  borderColor: 'rgba(255, 255, 255, 0.5)',
-                  '&:hover': {
-                    borderColor: 'white',
-                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                  color: "white",
+                  borderColor: "rgba(255, 255, 255, 0.5)",
+                  "&:hover": {
+                    borderColor: "white",
+                    backgroundColor: "rgba(255, 255, 255, 0.1)",
                   },
                 }}
               >
@@ -209,13 +232,13 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
         component="main"
         sx={{
           flexGrow: 1,
-          p: 3,
           mt: 8, // Account for AppBar height
           height: "calc(100vh - 64px)",
           backgroundColor: "#ffffff",
         }}
       >
-        {children}
+        {/* Main Content */}
+        <Box sx={{ p: 3 }}>{children}</Box>
       </Box>
 
       {/* Create Grant Modal */}

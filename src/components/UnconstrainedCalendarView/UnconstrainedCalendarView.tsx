@@ -3,18 +3,19 @@ import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
-import {
-  Box,
-  Typography,
-  Button,
-  Alert,
-} from "@mui/material";
+import { Box, Typography, Button, Alert } from "@mui/material";
 import {
   useWorkdayHours,
   useTimeSlots,
   useGrants,
 } from "../../hooks/useLocalData";
-import { format, startOfMonth, endOfMonth, addMonths, subMonths } from "date-fns";
+import {
+  format,
+  startOfMonth,
+  endOfMonth,
+  addMonths,
+  subMonths,
+} from "date-fns";
 import { generateUserColor } from "../../utils/colors";
 import { EnhancedTimesheetModal } from "../EnhancedTimesheetModal";
 
@@ -25,12 +26,9 @@ interface UnconstrainedCalendarViewProps {
   onDateSelect?: (date: string) => void;
 }
 
-export const UnconstrainedCalendarView: React.FC<UnconstrainedCalendarViewProps> = ({
-  userId,
-  userName,
-  organisationId,
-  onDateSelect,
-}) => {
+export const UnconstrainedCalendarView: React.FC<
+  UnconstrainedCalendarViewProps
+> = ({ userId, userName, organisationId, onDateSelect }) => {
   const [timesheetModalOpen, setTimesheetModalOpen] = useState(false);
   const [calendarApi, setCalendarApi] = useState<any>(null);
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -43,7 +41,7 @@ export const UnconstrainedCalendarView: React.FC<UnconstrainedCalendarViewProps>
   // Fetch data for current view period (expanded to include adjacent months for smooth navigation)
   const extendedStart = subMonths(currentMonth, 1);
   const extendedEnd = addMonths(currentMonthEnd, 1);
-  
+
   const periodStart = format(extendedStart, "yyyy-MM-dd");
   const periodEnd = format(extendedEnd, "yyyy-MM-dd");
 
@@ -55,7 +53,9 @@ export const UnconstrainedCalendarView: React.FC<UnconstrainedCalendarViewProps>
   // Filter grants by organisation if specified
   const grants = useMemo(() => {
     if (organisationId) {
-      return allGrants.filter(grant => grant.OrganisationID === organisationId);
+      return allGrants.filter(
+        (grant) => grant.OrganisationID === organisationId
+      );
     }
     return allGrants;
   }, [allGrants, organisationId]);
@@ -64,7 +64,7 @@ export const UnconstrainedCalendarView: React.FC<UnconstrainedCalendarViewProps>
     userId,
     userName,
     organisationId,
-    currentDate: format(currentDate, 'yyyy-MM-dd'),
+    currentDate: format(currentDate, "yyyy-MM-dd"),
     periodStart,
     periodEnd,
     year,
@@ -92,9 +92,13 @@ export const UnconstrainedCalendarView: React.FC<UnconstrainedCalendarViewProps>
 
     // Create events for each date with time slots
     Object.entries(slotsByDate).forEach(([date, daySlots]: [string, any]) => {
-      const totalHours = daySlots.reduce((sum: number, slot: any) => sum + (slot.HoursAllocated || 0), 0);
+      const totalHours = daySlots.reduce(
+        (sum: number, slot: any) => sum + (slot.HoursAllocated || 0),
+        0
+      );
       const availableHours = workdayHours[date] || 0;
-      const utilizationPercent = availableHours > 0 ? (totalHours / availableHours) * 100 : 0;
+      const utilizationPercent =
+        availableHours > 0 ? (totalHours / availableHours) * 100 : 0;
 
       // Create a summary event for the day
       eventList.push({
@@ -103,7 +107,7 @@ export const UnconstrainedCalendarView: React.FC<UnconstrainedCalendarViewProps>
         date: date,
         backgroundColor: userColor,
         borderColor: userColor,
-        textColor: '#ffffff',
+        textColor: "#ffffff",
         extendedProps: {
           daySlots,
           totalHours,
@@ -117,7 +121,7 @@ export const UnconstrainedCalendarView: React.FC<UnconstrainedCalendarViewProps>
       // Add individual grant events if there are multiple grants
       if (daySlots.length > 1) {
         daySlots.forEach((slot: any, index: number) => {
-          const grant = grants.find(g => g.PK === slot.GrantID);
+          const grant = grants.find((g) => g.PK === slot.GrantID);
           if (grant) {
             eventList.push({
               id: `${userId}-${date}-${slot.GrantID}`,
@@ -125,8 +129,8 @@ export const UnconstrainedCalendarView: React.FC<UnconstrainedCalendarViewProps>
               date: date,
               backgroundColor: `${userColor}80`, // Semi-transparent
               borderColor: userColor,
-              textColor: '#333333',
-              display: 'list-item',
+              textColor: "#333333",
+              display: "list-item",
               extendedProps: {
                 grantId: slot.GrantID,
                 grantTitle: grant.Title,
@@ -154,13 +158,16 @@ export const UnconstrainedCalendarView: React.FC<UnconstrainedCalendarViewProps>
       if (!existingHours || existingHours === 0) {
         // Create a default workday entry (8 hours)
         console.log("Creating workday entry for:", dateStr);
-        const { db, generateWorkdayHoursKey } = await import('../../db/schema');
+        const { db, generateWorkdayHoursKey } = await import("../../db/schema");
 
         const year = new Date(dateStr).getFullYear();
         const workdayHoursKey = generateWorkdayHoursKey(userId, year);
 
         // Get existing workday hours record for this year
-        const existingRecord = await db.workdayHours.get([userId, workdayHoursKey]);
+        const existingRecord = await db.workdayHours.get([
+          userId,
+          workdayHoursKey,
+        ]);
 
         if (existingRecord) {
           // Update existing record
@@ -183,7 +190,6 @@ export const UnconstrainedCalendarView: React.FC<UnconstrainedCalendarViewProps>
 
       // Open timesheet modal for this date
       setTimesheetModalOpen(true);
-
     } catch (error) {
       console.error("❌ Failed to create workday entry:", error);
     }
@@ -206,34 +212,19 @@ export const UnconstrainedCalendarView: React.FC<UnconstrainedCalendarViewProps>
   }, []);
 
   return (
-    <Box sx={{ width: '100%', minHeight: '100vh' }}>
+    <Box sx={{ width: "100%", minHeight: "100vh" }}>
       {/* Header */}
       <Box sx={{ mb: 3 }}>
         <Typography variant="h5" sx={{ fontWeight: 600, mb: 1 }}>
           Organization Calendar View - {userName}
         </Typography>
-        <Typography variant="body2" color="text.secondary">
-          Navigate freely through time to view allocations for this organization
-        </Typography>
-        {organisationId && (
-          <Typography variant="body2" sx={{
-            mt: 1,
-            p: 1,
-            backgroundColor: '#e8f5e8',
-            borderRadius: 1,
-            color: '#2e7d32',
-            fontWeight: 500
-          }}>
-            🏢 Organization-Filtered View: Showing data for this organization only
-          </Typography>
-        )}
       </Box>
 
       {/* Calendar Section */}
       <Box sx={{ mb: 3 }}>
         <Box
           sx={{
-            width: '100%',
+            width: "100%",
             height: 700,
             backgroundColor: "#ffffff",
             borderRadius: 2,
@@ -241,7 +232,7 @@ export const UnconstrainedCalendarView: React.FC<UnconstrainedCalendarViewProps>
             overflow: "hidden",
             "& .fc": {
               fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
-              height: '100%',
+              height: "100%",
             },
             "& .fc-toolbar": {
               padding: "16px 20px",
@@ -294,9 +285,9 @@ export const UnconstrainedCalendarView: React.FC<UnconstrainedCalendarViewProps>
             initialView="dayGridMonth"
             initialDate={currentDate}
             headerToolbar={{
-              left: 'prev,next today',
-              center: 'title',
-              right: 'dayGridMonth,dayGridWeek,listMonth',
+              left: "prev,next today",
+              center: "title",
+              right: "dayGridMonth,dayGridWeek,listMonth",
             }}
             buttonText={{
               today: "Today",
@@ -312,16 +303,21 @@ export const UnconstrainedCalendarView: React.FC<UnconstrainedCalendarViewProps>
             dayMaxEvents={3}
             moreLinkClick="popover"
             eventContent={(eventInfo) => {
-              const { daySlots, totalHours, availableHours, utilizationPercent } = eventInfo.event.extendedProps;
-              
+              const {
+                daySlots,
+                totalHours,
+                availableHours,
+                utilizationPercent,
+              } = eventInfo.event.extendedProps;
+
               if (daySlots) {
                 // Main day summary event
                 return (
-                  <Box sx={{ p: 0.5, fontSize: '0.75rem' }}>
+                  <Box sx={{ p: 0.5, fontSize: "0.75rem" }}>
                     <Box sx={{ fontWeight: 600 }}>
                       {totalHours.toFixed(1)}h / {availableHours}h
                     </Box>
-                    <Box sx={{ fontSize: '0.65rem', opacity: 0.9 }}>
+                    <Box sx={{ fontSize: "0.65rem", opacity: 0.9 }}>
                       {utilizationPercent.toFixed(0)}% utilized
                     </Box>
                   </Box>
@@ -329,7 +325,7 @@ export const UnconstrainedCalendarView: React.FC<UnconstrainedCalendarViewProps>
               } else {
                 // Individual grant event
                 return (
-                  <Box sx={{ p: 0.5, fontSize: '0.7rem' }}>
+                  <Box sx={{ p: 0.5, fontSize: "0.7rem" }}>
                     {eventInfo.event.title}
                   </Box>
                 );
