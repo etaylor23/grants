@@ -2,7 +2,9 @@ import React, { useState } from "react";
 import { useParams, Navigate } from "react-router-dom";
 import { Box, Typography } from "@mui/material";
 import { AppLayout } from "../components/Layout/AppLayout";
-import { UnconstrainedCalendarView } from "../components/UnconstrainedCalendarView";
+import { SmartCalendar } from "../components/SmartCalendar";
+import { ContextIndicator } from "../components/ContextIndicator";
+import { BackToGlobalButton } from "../components/BackToGlobalButton";
 import { useOrganisations, useIndividuals } from "../hooks/useLocalData";
 import { Individual } from "../db/schema";
 
@@ -65,45 +67,36 @@ export const OrganisationCalendarPage: React.FC = () => {
     <AppLayout selectedUserId={selectedUserId} onUserChange={handleUserChange}>
       <Box sx={{ p: 3 }}>
         {/* Header */}
-        <Box sx={{ mb: 3 }}>
-          <Typography variant="h4" sx={{ fontWeight: 600, mb: 1 }}>
-            Calendar - {organisation.Name}
-          </Typography>
-          <Typography variant="body1" color="text.secondary">
-            View time allocations and workdays for organisation members
-          </Typography>
+        <Box
+          sx={{
+            mb: 3,
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "flex-start",
+          }}
+        >
+          <Box>
+            <Typography variant="h4" sx={{ fontWeight: 600, mb: 1 }}>
+              Calendar - {organisation.Name}
+            </Typography>
+            <Typography variant="body1" color="text.secondary">
+              View time allocations and workdays for organisation members
+            </Typography>
+          </Box>
+          <BackToGlobalButton globalRoute="/calendar" />
         </Box>
 
-        {selectedUser ? (
-          <UnconstrainedCalendarView
-            userId={selectedUser.PK}
-            userName={`${selectedUser.FirstName} ${selectedUser.LastName}`}
-            organisationId={organisation.PK}
-            onDateSelect={handleDateSelect}
-          />
-        ) : (
-          <Box
-            sx={{
-              textAlign: "center",
-              py: 8,
-              backgroundColor: "#f5f5f5",
-              borderRadius: 2,
-              border: "1px solid #e0e0e0",
-            }}
-          >
-            <Typography variant="h6" color="text.secondary" sx={{ mb: 1 }}>
-              Select a team member to view their calendar
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              Use the user picker in the top navigation to select a team member
-            </Typography>
-            {individuals.length === 0 && (
-              <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-                No team members found in this organisation
-              </Typography>
-            )}
-          </Box>
-        )}
+        {/* Context Indicator */}
+        <ContextIndicator variant="banner" showDescription sx={{ mb: 3 }} />
+
+        {/* Smart Calendar */}
+        <SmartCalendar
+          organizationId={orgNumber}
+          selectedUserId={selectedUserId}
+          selectedUser={selectedUser}
+          onUserChange={handleUserChange}
+          onDateSelect={handleDateSelect}
+        />
       </Box>
     </AppLayout>
   );

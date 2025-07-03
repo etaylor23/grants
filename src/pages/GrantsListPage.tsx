@@ -28,6 +28,7 @@ import { format, parseISO, isAfter, isBefore } from "date-fns";
 import { AppLayout } from "../components/Layout/AppLayout";
 import { CreateGrantModal } from "../components/CreateGrantModal";
 import { ImpactAnalysisModal } from "../components/ImpactAnalysisModal";
+import { ContextIndicator } from "../components/ContextIndicator";
 import {
   useGrants,
   useIndividuals,
@@ -244,20 +245,6 @@ export const GrantsListPage: React.FC = () => {
             <Typography variant="body1" color="text.secondary">
               View and manage grants across all organizations
             </Typography>
-            <Typography
-              variant="body2"
-              sx={{
-                mt: 1,
-                p: 1,
-                backgroundColor: "#e3f2fd",
-                borderRadius: 1,
-                color: "#1976d2",
-                fontWeight: 500,
-                display: "inline-block",
-              }}
-            >
-              📊 Global View: Showing grants from all organizations
-            </Typography>
           </Box>
           <Button
             variant="contained"
@@ -267,6 +254,9 @@ export const GrantsListPage: React.FC = () => {
             Create Grant
           </Button>
         </Box>
+
+        {/* Context Indicator */}
+        <ContextIndicator variant="banner" showDescription sx={{ mb: 3 }} />
 
         {/* Grants Table */}
         <TableContainer component={Paper} sx={{ borderRadius: 2 }}>

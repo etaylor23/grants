@@ -5,6 +5,8 @@ export interface BreadcrumbItem {
   label: string;
   path: string;
   icon?: React.ReactNode;
+  scope?: "global" | "organization";
+  scopeIndicator?: string;
 }
 
 export interface BreadcrumbContext {
@@ -12,6 +14,13 @@ export interface BreadcrumbContext {
   grants?: Grant[];
   individuals?: Individual[];
   isLoading?: boolean;
+}
+
+export interface ScopeInfo {
+  isGlobal: boolean;
+  organizationId?: string;
+  organizationName?: string;
+  contextType: "global" | "organization" | "mixed";
 }
 
 /**
@@ -24,10 +33,11 @@ export const generateBreadcrumbs = (
   const { organisations = [], grants = [], isLoading = false } = context;
   const breadcrumbs: BreadcrumbItem[] = [];
 
-  // Always start with Home
+  // Always start with Dashboard
   breadcrumbs.push({
-    label: "Home",
+    label: "Dashboard",
     path: "/",
+    scope: "global",
   });
 
   // Parse the pathname to determine the current route structure
@@ -35,9 +45,17 @@ export const generateBreadcrumbs = (
 
   // Handle different route patterns
   if (pathSegments.length === 0) {
-    // Root path - just Home
+    // Root path - just Dashboard
     return breadcrumbs;
   }
+
+  // Determine if we're in organization context
+  const isOrganizationContext =
+    pathSegments.length >= 2 && pathSegments[0] === "organisation";
+  const currentOrgNumber = isOrganizationContext ? pathSegments[1] : null;
+  const currentOrganisation = currentOrgNumber
+    ? organisations.find((org) => org.CompanyNumber === currentOrgNumber)
+    : null;
 
   // Check for organisations routes
   if (
@@ -47,6 +65,8 @@ export const generateBreadcrumbs = (
     breadcrumbs.push({
       label: "Organisations",
       path: "/organisations",
+      scope: "global",
+      scopeIndicator: "Global",
     });
 
     // If we have a specific organisation
@@ -63,6 +83,8 @@ export const generateBreadcrumbs = (
             organisation?.Name ||
             (isLoading ? "Loading..." : `Organisation ${orgNumber}`),
           path: `/organisation/${orgNumber}`,
+          scope: "organization",
+          scopeIndicator: organisation?.Name || `Org ${orgNumber}`,
         });
       }
 
@@ -71,6 +93,8 @@ export const generateBreadcrumbs = (
         breadcrumbs.push({
           label: "Grants",
           path: `/organisation/${orgNumber}/grants`,
+          scope: "organization",
+          scopeIndicator: organisation?.Name || `Org ${orgNumber}`,
         });
 
         // If we have a specific grant
@@ -86,6 +110,8 @@ export const generateBreadcrumbs = (
               label:
                 grant?.Title || (isLoading ? "Loading..." : "Grant Details"),
               path: `/organisation/${orgNumber}/grants/${grantId}`,
+              scope: "organization",
+              scopeIndicator: organisation?.Name || `Org ${orgNumber}`,
             });
           }
         }
@@ -96,6 +122,8 @@ export const generateBreadcrumbs = (
         breadcrumbs.push({
           label: "Timesheets",
           path: `/organisation/${orgNumber}/timesheets`,
+          scope: "organization",
+          scopeIndicator: organisation?.Name || `Org ${orgNumber}`,
         });
       }
 
@@ -103,6 +131,8 @@ export const generateBreadcrumbs = (
         breadcrumbs.push({
           label: "Team Members",
           path: `/organisation/${orgNumber}/individuals`,
+          scope: "organization",
+          scopeIndicator: organisation?.Name || `Org ${orgNumber}`,
         });
       }
 
@@ -110,6 +140,8 @@ export const generateBreadcrumbs = (
         breadcrumbs.push({
           label: "Calendar",
           path: `/organisation/${orgNumber}/calendar`,
+          scope: "organization",
+          scopeIndicator: organisation?.Name || `Org ${orgNumber}`,
         });
       }
     }
@@ -117,18 +149,71 @@ export const generateBreadcrumbs = (
 
   // Handle grants list route (if it exists at root level)
   if (pathSegments[0] === "grants") {
-    breadcrumbs.push({
-      label: "Grants",
-      path: "/grants",
-    });
+    if (pathSegments.length >= 2) {
+      // Organization-specific grants: /grants/:orgNumber
+      const orgNumber = pathSegments[1];
+      const organisation = organisations.find(
+        (org) => org.CompanyNumber === orgNumber
+      );
+
+      breadcrumbs.push({
+        label: "Grants",
+        path: `/grants/${orgNumber}`,
+        scope: "organization",
+        scopeIndicator: organisation?.Name || `Org ${orgNumber}`,
+      });
+
+      // Handle grant detail: /grants/:orgNumber/:grantId
+      if (pathSegments.length >= 3) {
+        const grantId = pathSegments[2];
+        const grant = grants.find(
+          (g) => g.PK === grantId && g.OrganisationID === organisation?.PK
+        );
+
+        if (grant || isLoading) {
+          breadcrumbs.push({
+            label: grant?.Title || (isLoading ? "Loading..." : "Grant Details"),
+            path: `/grants/${orgNumber}/${grantId}`,
+            scope: "organization",
+            scopeIndicator: organisation?.Name || `Org ${orgNumber}`,
+          });
+        }
+      }
+    } else {
+      // Global grants: /grants
+      breadcrumbs.push({
+        label: "Grants",
+        path: "/grants",
+        scope: "global",
+        scopeIndicator: "Global",
+      });
+    }
   }
 
   // Handle main calendar route
   if (pathSegments[0] === "calendar") {
-    breadcrumbs.push({
-      label: "Calendar",
-      path: "/calendar",
-    });
+    if (pathSegments.length >= 2) {
+      // Organization-specific calendar: /calendar/:orgNumber
+      const orgNumber = pathSegments[1];
+      const organisation = organisations.find(
+        (org) => org.CompanyNumber === orgNumber
+      );
+
+      breadcrumbs.push({
+        label: "Calendar",
+        path: `/calendar/${orgNumber}`,
+        scope: "organization",
+        scopeIndicator: organisation?.Name || `Org ${orgNumber}`,
+      });
+    } else {
+      // Global calendar: /calendar
+      breadcrumbs.push({
+        label: "Calendar",
+        path: "/calendar",
+        scope: "global",
+        scopeIndicator: "Global",
+      });
+    }
   }
 
   // Handle timesheet routes
@@ -136,6 +221,8 @@ export const generateBreadcrumbs = (
     breadcrumbs.push({
       label: "Timesheet",
       path: "/timesheet",
+      scope: "global",
+      scopeIndicator: "Global",
     });
 
     // If we have a specific user timesheet
@@ -150,6 +237,8 @@ export const generateBreadcrumbs = (
       breadcrumbs.push({
         label: userName,
         path: `/timesheet/${userSlug}`,
+        scope: "global",
+        scopeIndicator: "Global",
       });
     }
   }
@@ -188,6 +277,53 @@ export const generateBreadcrumbs = (
 };
 
 /**
+ * Determines the current scope information based on the URL
+ */
+export const getScopeInfo = (
+  pathname: string,
+  organisations: Organisation[] = []
+): ScopeInfo => {
+  const pathSegments = pathname.split("/").filter(Boolean);
+
+  // Default to global scope
+  const scopeInfo: ScopeInfo = {
+    isGlobal: true,
+    contextType: "global",
+  };
+
+  // Check if we're in an organization context
+  if (pathSegments.length >= 2 && pathSegments[0] === "organisation") {
+    const orgNumber = pathSegments[1];
+    const organisation = organisations.find(
+      (org) => org.CompanyNumber === orgNumber
+    );
+
+    scopeInfo.isGlobal = false;
+    scopeInfo.organizationId = orgNumber;
+    scopeInfo.organizationName = organisation?.Name;
+    scopeInfo.contextType = "organization";
+  }
+
+  // Check for unified organization routes
+  if (
+    pathSegments.length >= 2 &&
+    (pathSegments[0] === "calendar" || pathSegments[0] === "grants")
+  ) {
+    const orgNumber = pathSegments[1];
+    const organisation = organisations.find(
+      (org) => org.CompanyNumber === orgNumber
+    );
+
+    scopeInfo.isGlobal = false;
+    scopeInfo.organizationId = orgNumber;
+    scopeInfo.organizationName = organisation?.Name;
+    scopeInfo.contextType = "organization";
+  }
+
+  return scopeInfo;
+};
+
+/**
  * Hook to get breadcrumbs for the current route
  */
 export const useBreadcrumbs = (
@@ -195,4 +331,12 @@ export const useBreadcrumbs = (
 ): BreadcrumbItem[] => {
   const location = useLocation();
   return generateBreadcrumbs(location.pathname, context);
+};
+
+/**
+ * Hook to get current scope information
+ */
+export const useScopeInfo = (organisations: Organisation[] = []): ScopeInfo => {
+  const location = useLocation();
+  return getScopeInfo(location.pathname, organisations);
 };

@@ -15,6 +15,8 @@ import {
   Schedule as TimesheetIcon,
 } from "@mui/icons-material";
 import { AppLayout } from "../components/Layout/AppLayout";
+import { ContextIndicator } from "../components/ContextIndicator";
+import { BackToGlobalButton } from "../components/BackToGlobalButton";
 import { useOrganisations } from "../hooks/useLocalData";
 
 export const OrganisationDashboard: React.FC = () => {
@@ -94,14 +96,27 @@ export const OrganisationDashboard: React.FC = () => {
     <AppLayout>
       <Box sx={{ p: 3 }}>
         {/* Header */}
-        <Box sx={{ mb: 4 }}>
-          <Typography variant="h4" sx={{ fontWeight: 600, mb: 1 }}>
-            {organisation.Name}
-          </Typography>
-          <Typography variant="body1" color="text.secondary">
-            Company Number: {organisation.CompanyNumber}
-          </Typography>
+        <Box
+          sx={{
+            mb: 4,
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "flex-start",
+          }}
+        >
+          <Box>
+            <Typography variant="h4" sx={{ fontWeight: 600, mb: 1 }}>
+              {organisation.Name}
+            </Typography>
+            <Typography variant="body1" color="text.secondary">
+              Company Number: {organisation.CompanyNumber}
+            </Typography>
+          </Box>
+          <BackToGlobalButton globalRoute="/" />
         </Box>
+
+        {/* Context Indicator */}
+        <ContextIndicator variant="banner" showDescription sx={{ mb: 3 }} />
 
         {/* Dashboard Grid */}
         <Grid container spacing={3}>

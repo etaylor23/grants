@@ -1,6 +1,8 @@
 import React, { useState } from "react";
+import { Box, Typography } from "@mui/material";
 import { AppLayout } from "../components/Layout/AppLayout";
-import { LocalCalendarView } from "../components/LocalCalendarView";
+import { SmartCalendar } from "../components/SmartCalendar";
+import { ContextIndicator } from "../components/ContextIndicator";
 import { Individual } from "../db/schema";
 
 export const LocalCalendarPage: React.FC = () => {
@@ -17,21 +19,29 @@ export const LocalCalendarPage: React.FC = () => {
   };
 
   return (
-    <AppLayout
-      selectedUserId={selectedUserId}
-      onUserChange={handleUserChange}
-    >
-      {selectedUser ? (
-        <LocalCalendarView
-          userId={selectedUser.PK}
-          userName={`${selectedUser.FirstName} ${selectedUser.LastName}`}
+    <AppLayout selectedUserId={selectedUserId} onUserChange={handleUserChange}>
+      <Box sx={{ p: 3 }}>
+        {/* Header */}
+        <Box sx={{ mb: 3 }}>
+          <Typography variant="h4" sx={{ fontWeight: 600, mb: 1 }}>
+            Global Calendar
+          </Typography>
+          <Typography variant="body1" color="text.secondary">
+            View time allocations and workdays across all organizations
+          </Typography>
+        </Box>
+
+        {/* Context Indicator */}
+        <ContextIndicator variant="banner" showDescription sx={{ mb: 3 }} />
+
+        {/* Smart Calendar */}
+        <SmartCalendar
+          selectedUserId={selectedUserId}
+          selectedUser={selectedUser}
+          onUserChange={handleUserChange}
           onDateSelect={handleDateSelect}
         />
-      ) : (
-        <div style={{ padding: '20px', textAlign: 'center' }}>
-          <p>Please select a user to view the calendar.</p>
-        </div>
-      )}
+      </Box>
     </AppLayout>
   );
 };

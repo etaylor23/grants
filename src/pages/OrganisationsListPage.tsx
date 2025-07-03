@@ -24,6 +24,7 @@ import { format, parseISO } from "date-fns";
 import { useNavigate } from "react-router-dom";
 import { AppLayout } from "../components/Layout/AppLayout";
 import { CreateOrganisationModal } from "../components/CreateOrganisationModal";
+import { ContextIndicator } from "../components/ContextIndicator";
 import { useOrganisations } from "../hooks/useLocalData";
 import { Organisation } from "../db/schema";
 
@@ -132,6 +133,9 @@ export const OrganisationsListPage: React.FC = () => {
             Create Organisation
           </Button>
         </Box>
+
+        {/* Context Indicator */}
+        <ContextIndicator variant="banner" showDescription sx={{ mb: 3 }} />
 
         {/* Organisations Table */}
         <TableContainer component={Paper} sx={{ borderRadius: 2 }}>

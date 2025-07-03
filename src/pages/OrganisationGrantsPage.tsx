@@ -29,6 +29,8 @@ import { format, parseISO, isAfter, isBefore } from "date-fns";
 import { AppLayout } from "../components/Layout/AppLayout";
 import { CreateGrantModal } from "../components/CreateGrantModal";
 import { ImpactAnalysisModal } from "../components/ImpactAnalysisModal";
+import { ContextIndicator } from "../components/ContextIndicator";
+import { BackToGlobalButton } from "../components/BackToGlobalButton";
 import {
   useGrants,
   useIndividuals,
@@ -214,14 +216,20 @@ export const OrganisationGrantsPage: React.FC = () => {
               Organization Grants - {organisation.Name}
             </Typography>
           </Box>
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={() => setCreateGrantModalOpen(true)}
-          >
-            Create Grant
-          </Button>
+          <Box sx={{ display: "flex", gap: 2, alignItems: "center" }}>
+            <BackToGlobalButton globalRoute="/grants" />
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={() => setCreateGrantModalOpen(true)}
+            >
+              Create Grant
+            </Button>
+          </Box>
         </Box>
+
+        {/* Context Indicator */}
+        <ContextIndicator variant="banner" showDescription sx={{ mb: 3 }} />
 
         {/* Grants Table */}
         <TableContainer component={Paper} sx={{ borderRadius: 2 }}>

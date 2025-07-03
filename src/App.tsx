@@ -10,6 +10,7 @@ import {
 } from "react-router-dom";
 import { theme } from "./theme";
 // Legacy pages removed - using IndexedDB only
+import { DashboardPage } from "./pages/DashboardPage";
 import { LocalCalendarPage } from "./pages/LocalCalendarPage";
 import { LocalTimesheetPage } from "./pages/LocalTimesheetPage";
 import { GrantsListPage } from "./pages/GrantsListPage";
@@ -83,19 +84,27 @@ function App() {
         <CssBaseline />
         <Router>
           <Routes>
-            {/* Default route */}
-            <Route path="/" element={<Navigate to="/calendar" replace />} />
+            {/* Default route - Dashboard */}
+            <Route path="/" element={<DashboardPage />} />
 
-            {/* IndexedDB routes */}
+            {/* Global routes */}
             <Route path="/calendar" element={<LocalCalendarPage />} />
+            <Route
+              path="/calendar/:orgNumber"
+              element={<OrganisationCalendarPage />}
+            />
             <Route
               path="/timesheet/:userSlug"
               element={<LocalTimesheetPage />}
             />
             <Route path="/grants" element={<GrantsListPage />} />
+            <Route
+              path="/grants/:orgNumber"
+              element={<OrganisationGrantsPage />}
+            />
             <Route path="/organisations" element={<OrganisationsListPage />} />
 
-            {/* Organisation-specific routes */}
+            {/* Organization-specific routes (legacy support) */}
             <Route
               path="/organisation/:orgNumber"
               element={<OrganisationDashboard />}
@@ -121,8 +130,14 @@ function App() {
               element={<OrganisationTimesheetsPage />}
             />
 
+            {/* Grant detail routes */}
+            <Route
+              path="/grants/:orgNumber/:grantId"
+              element={<GrantViewPage />}
+            />
+
             {/* Fallback redirect */}
-            <Route path="*" element={<Navigate to="/calendar" replace />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Router>
 

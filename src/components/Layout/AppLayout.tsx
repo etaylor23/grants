@@ -1,36 +1,20 @@
 import React, { useState } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
 import {
   AppBar,
   Toolbar,
   Typography,
   Drawer,
-  List,
-  ListItem,
-  ListItemButton,
-  ListItemIcon,
-  ListItemText,
   IconButton,
   Box,
-  Divider,
-  FormControl,
-  Select,
-  MenuItem,
   Button,
 } from "@mui/material";
-import {
-  Menu as MenuIcon,
-  CalendarToday as CalendarIcon,
-  GridOn as GridIcon,
-  Person as PersonIcon,
-  Add as AddIcon,
-  Assignment as GrantIcon,
-  Business as OrganisationIcon,
-} from "@mui/icons-material";
+import { Menu as MenuIcon, Add as AddIcon } from "@mui/icons-material";
 // IndexedDB only - no legacy dependencies
-import { ViewMode } from "../../models/types";
 import { UserPicker } from "../UserPicker";
-import { Individual, Organisation, Grant } from "../../db/schema";
+import { DynamicSidebar } from "../DynamicSidebar";
+import { ContextSwitcher } from "../ContextSwitcher";
+import { ContextTransition } from "../ContextTransition";
+import { Individual } from "../../db/schema";
 import { CreateGrantModal } from "../CreateGrantModal";
 import { HeaderBreadcrumbs } from "../HeaderBreadcrumbs";
 
@@ -49,19 +33,9 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
 }) => {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [createGrantModalOpen, setCreateGrantModalOpen] = useState(false);
-  const navigate = useNavigate();
-  const location = useLocation();
-
-  // Remove old breadcrumb logic - now handled by HeaderBreadcrumbs component
 
   const toggleDrawer = () => {
     setDrawerOpen(!drawerOpen);
-  };
-
-  // Simplified navigation for IndexedDB mode
-  const handleNavigation = (path: string) => {
-    navigate(path);
-    setDrawerOpen(false);
   };
 
   return (
@@ -109,33 +83,37 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
             </Box>
           </Box>
 
-          {/* User Picker and Create Grant Button */}
-          {onUserChange && (
-            <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-              <UserPicker
-                selectedUserId={selectedUserId || null}
-                onUserChange={onUserChange}
-                organisationId={organisationId}
-              />
+          {/* Context Switcher and User Controls */}
+          <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+            <ContextSwitcher />
 
-              <Button
-                variant="outlined"
-                size="small"
-                startIcon={<AddIcon />}
-                onClick={() => setCreateGrantModalOpen(true)}
-                sx={{
-                  color: "white",
-                  borderColor: "rgba(255, 255, 255, 0.5)",
-                  "&:hover": {
-                    borderColor: "white",
-                    backgroundColor: "rgba(255, 255, 255, 0.1)",
-                  },
-                }}
-              >
-                Create Grant
-              </Button>
-            </Box>
-          )}
+            {onUserChange && (
+              <>
+                <UserPicker
+                  selectedUserId={selectedUserId || null}
+                  onUserChange={onUserChange}
+                  organisationId={organisationId}
+                />
+
+                <Button
+                  variant="outlined"
+                  size="small"
+                  startIcon={<AddIcon />}
+                  onClick={() => setCreateGrantModalOpen(true)}
+                  sx={{
+                    color: "white",
+                    borderColor: "rgba(255, 255, 255, 0.5)",
+                    "&:hover": {
+                      borderColor: "white",
+                      backgroundColor: "rgba(255, 255, 255, 0.1)",
+                    },
+                  }}
+                >
+                  Create Grant
+                </Button>
+              </>
+            )}
+          </Box>
         </Toolbar>
       </AppBar>
 
@@ -154,78 +132,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
         }}
       >
         <Toolbar />
-        <Box sx={{ overflow: "auto" }}>
-          <List>
-            <ListItem disablePadding>
-              <ListItemButton
-                selected={location.pathname === "/calendar"}
-                onClick={() => handleNavigation("/calendar")}
-              >
-                <ListItemIcon>
-                  <CalendarIcon />
-                </ListItemIcon>
-                <ListItemText primary="Calendar View" />
-              </ListItemButton>
-            </ListItem>
-            <ListItem disablePadding>
-              <ListItemButton
-                selected={location.pathname === "/grants"}
-                onClick={() => handleNavigation("/grants")}
-              >
-                <ListItemIcon>
-                  <GrantIcon />
-                </ListItemIcon>
-                <ListItemText primary="Grants" />
-              </ListItemButton>
-            </ListItem>
-            <ListItem disablePadding>
-              <ListItemButton
-                selected={location.pathname === "/organisations"}
-                onClick={() => handleNavigation("/organisations")}
-              >
-                <ListItemIcon>
-                  <OrganisationIcon />
-                </ListItemIcon>
-                <ListItemText primary="Organisations" />
-              </ListItemButton>
-            </ListItem>
-          </List>
-
-          {/* Debug: Test Organisation Link */}
-          <Divider />
-          <List>
-            <ListItem>
-              <ListItemText
-                primary="Debug: Test Organisation"
-                secondary="Click to test org routing"
-              />
-            </ListItem>
-            <ListItem disablePadding>
-              <ListItemButton
-                onClick={() => handleNavigation("/organisation/12345678")}
-              >
-                <ListItemIcon>
-                  <OrganisationIcon />
-                </ListItemIcon>
-                <ListItemText primary="Test Org (12345678)" />
-              </ListItemButton>
-            </ListItem>
-          </List>
-
-          <Divider />
-
-          <List>
-            <ListItem>
-              <ListItemIcon>
-                <PersonIcon />
-              </ListItemIcon>
-              <ListItemText
-                primary="IndexedDB Mode"
-                secondary="Using local database"
-              />
-            </ListItem>
-          </List>
-        </Box>
+        <DynamicSidebar organizationId={organisationId} />
       </Drawer>
 
       <Box
@@ -237,8 +144,10 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
           backgroundColor: "#ffffff",
         }}
       >
-        {/* Main Content */}
-        <Box sx={{ p: 3 }}>{children}</Box>
+        {/* Main Content with Context Transitions */}
+        <ContextTransition animateOnContextChange>
+          <Box sx={{ p: 3 }}>{children}</Box>
+        </ContextTransition>
       </Box>
 
       {/* Create Grant Modal */}

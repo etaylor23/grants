@@ -1,0 +1,1 @@
+export { BackToGlobalButton } from './BackToGlobalButton';
