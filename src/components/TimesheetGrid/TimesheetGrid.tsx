@@ -80,6 +80,9 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({
   } | null>(null);
   const [bulkAllocationModalOpen, setBulkAllocationModalOpen] = useState(false);
 
+  // State for managing dropdown open/close
+  const [openDropdowns, setOpenDropdowns] = useState<Set<string>>(new Set());
+
   const currentDate = new Date();
   const periodStart = startDate || startOfMonth(currentDate);
   const periodEnd = endDate || endOfMonth(currentDate);
@@ -246,9 +249,13 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({
     ];
 
     // Add date columns after the summary columns
-    periodDays.forEach((day) => {
+    periodDays.forEach((day, index) => {
+      const dateStr = format(day, "yyyy-MM-dd");
+      if (index < 3) {
+        console.log(`📅 Creating column for ${dateStr} at index ${index + 5}`);
+      }
       cols.push({
-        columnId: format(day, "yyyy-MM-dd"),
+        columnId: dateStr,
         width: 100,
       });
     });
@@ -522,18 +529,55 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({
           text: "",
           className: "read-only-cell",
         } as TextCell & { className: string },
-        ...periodDays.map((day) => {
+        {
+          type: "text",
+          text: "",
+          className: "read-only-cell",
+        } as TextCell & { className: string },
+        {
+          type: "text",
+          text: "",
+          className: "read-only-cell",
+        } as TextCell & { className: string },
+        ...periodDays.map((day, index) => {
           const dateStr = format(day, "yyyy-MM-dd");
-          const leaveType = leaveTypeLookup[dateStr];
-          const isWeekendDay = enhancedDisabledDates.includes(dateStr);
+          const leaveType = leaveTypeLookup[dateStr] || "work"; // Ensure we always have a valid value
+          // Only disable weekends for dropdown, not leave days
+          const isWeekendDay = isWeekend(day);
 
-          return {
+          const isDropdownOpen = openDropdowns.has(dateStr);
+
+          const dropdownCell: DropdownCell = {
             type: "dropdown",
             selectedValue: leaveType,
             values: leaveTypeOptions,
-            isDisabled: isWeekendDay,
+            isDisabled: isWeekendDay, // Disable weekends
+            isOpen: isDropdownOpen,
+            inputValue: "", // Empty input value
+          };
+
+          // Debug logging for dropdown cell creation (only for first few cells)
+          if (index < 3) {
+            console.log(
+              `📋 Creating dropdown cell for ${dateStr} (index ${index}):`,
+              {
+                dateStr,
+                leaveType,
+                isWeekendDay,
+                selectedValue: dropdownCell.selectedValue,
+                isOpen: dropdownCell.isOpen,
+                columnIndex: index + 5, // Now correctly +5 for the 5 summary columns
+                cellPosition: `Cell ${
+                  index + 5
+                } should be date column for ${dateStr}`,
+              }
+            );
+          }
+
+          return {
+            ...dropdownCell,
             className: "leave-type-cell",
-            date: dateStr,
+            date: dateStr, // Store the date for debugging
           } as DropdownCell & {
             className: string;
             date: string;
@@ -556,6 +600,8 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({
     enhancedDisabledDates,
     workdayHoursLookup,
     leaveTypeLookup,
+    leaveTypeOptions,
+    openDropdowns,
     monthGroups,
     grants,
     hourlyRate,
@@ -654,6 +700,10 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({
   // Handle day type changes from dropdown
   const handleDayTypeChange = useCallback(
     async (date: string, newLeaveType: LeaveType) => {
+      console.log("🔄 handleDayTypeChange called with:", {
+        date,
+        newLeaveType,
+      });
       try {
         const currentLeaveType = leaveTypeLookup[date];
         const year = new Date(date).getFullYear();
@@ -663,30 +713,28 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({
         const isChangingToLeave =
           currentLeaveType === "work" && newLeaveType !== "work";
 
-        if (isChangingToLeave) {
-          // Clear all existing timesheet hours for this date
-          const existingSlots = timeSlots.filter(
-            (slot: any) => slot.Date === date
+        // Clear all existing timesheet hours for this date if changing to leave
+        const existingSlots = timeSlots.filter(
+          (slot: any) => slot.Date === date
+        );
+
+        if (isChangingToLeave && existingSlots.length > 0) {
+          console.log(
+            `Clearing ${existingSlots.length} timesheet entries for ${date} (changing to ${newLeaveType})`
           );
 
-          if (existingSlots.length > 0) {
-            console.log(
-              `Clearing ${existingSlots.length} timesheet entries for ${date} (changing to ${newLeaveType})`
-            );
+          // Create delete operations for all existing slots
+          const deleteOperations = existingSlots.map((slot: any) => ({
+            type: "delete" as const,
+            date: slot.Date,
+            grantId: slot.GrantID,
+          }));
 
-            // Create delete operations for all existing slots
-            const deleteOperations = existingSlots.map((slot: any) => ({
-              type: "delete" as const,
-              date: slot.Date,
-              grantId: slot.GrantID,
-            }));
-
-            // Save the deletions first
-            await saveSlotsMutation.mutateAsync({
-              userId,
-              operations: deleteOperations,
-            });
-          }
+          // Save the deletions first
+          await saveSlotsMutation.mutateAsync({
+            userId,
+            operations: deleteOperations,
+          });
         }
 
         // Update the day type
@@ -706,10 +754,7 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({
         console.log(`Updated ${date} to ${newLeaveType}`);
 
         // Show user feedback if hours were cleared
-        if (
-          isChangingToLeave &&
-          timeSlots.filter((slot: any) => slot.Date === date).length > 0
-        ) {
+        if (isChangingToLeave && existingSlots.length > 0) {
           setError(
             `Day type changed to ${newLeaveType}. All existing timesheet hours for ${date} have been cleared.`
           );
@@ -748,11 +793,100 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({
 
         // Handle dropdown changes for leave types
         if (rowId === "leaveTypes" && newCell.type === "dropdown") {
-          const dateIndex = parseInt(columnId) - 5; // Account for fixed columns
-          if (dateIndex >= 0 && dateIndex < periodDays.length) {
-            const date = format(periodDays[dateIndex], "yyyy-MM-dd");
-            await handleDayTypeChange(date, newCell.selectedValue as LeaveType);
+          console.log("🎯 Dropdown change detected:", {
+            rowId,
+            columnId,
+            columnIdType: typeof columnId,
+            newCell,
+            selectedValue: newCell.selectedValue,
+            previousValue: change.previousCell?.selectedValue,
+            isOpen: newCell.isOpen,
+            previousIsOpen: change.previousCell?.isOpen,
+            cellDate: (newCell as any).date, // Check if date is stored in cell
+          });
+
+          // Use columnId directly as the date - ensure it's a string
+          const actualDate = String(columnId);
+
+          // Validate date format and ensure it's within our period
+          if (!actualDate.match(/^\d{4}-\d{2}-\d{2}$/)) {
+            console.error(
+              "❌ Invalid date format:",
+              actualDate,
+              "Type:",
+              typeof columnId
+            );
+            continue;
           }
+
+          // Additional validation: check if this date is in our period
+          const dateInPeriod = periodDays.some(
+            (day) => format(day, "yyyy-MM-dd") === actualDate
+          );
+          if (!dateInPeriod) {
+            console.error("❌ Date not in current period:", actualDate);
+            continue;
+          }
+
+          console.log("🎯 Processing dropdown change for date:", actualDate);
+
+          // Handle dropdown open/close state changes
+          if (newCell.isOpen !== change.previousCell?.isOpen) {
+            setOpenDropdowns((prev) => {
+              if (newCell.isOpen) {
+                // Only one dropdown open at a time - close all others
+                const newSet = new Set([actualDate]);
+                console.log(
+                  "🔓 Opening dropdown for:",
+                  actualDate,
+                  "(closing all others)",
+                  "Previous state:",
+                  Array.from(prev)
+                );
+                return newSet;
+              } else {
+                // Close this specific dropdown
+                const newSet = new Set(prev);
+                newSet.delete(actualDate);
+                console.log(
+                  "🔒 Closing dropdown for:",
+                  actualDate,
+                  "Remaining open:",
+                  Array.from(newSet)
+                );
+                return newSet;
+              }
+            });
+          }
+
+          // Handle value selection changes
+          if (newCell.selectedValue !== change.previousCell?.selectedValue) {
+            console.log("🔄 Calling handleDayTypeChange:", {
+              date: actualDate,
+              selectedValue: newCell.selectedValue,
+              previousValue: change.previousCell?.selectedValue,
+            });
+
+            // Call handleDayTypeChange with the correct date first
+            await handleDayTypeChange(
+              actualDate,
+              newCell.selectedValue as LeaveType
+            );
+
+            // Close the dropdown after selection (with a small delay to ensure proper state update)
+            setTimeout(() => {
+              setOpenDropdowns((prev) => {
+                const newSet = new Set(prev);
+                newSet.delete(actualDate);
+                console.log(
+                  "🔒 Auto-closing dropdown after selection for:",
+                  actualDate
+                );
+                return newSet;
+              });
+            }, 100);
+          }
+
           continue;
         }
 
@@ -883,7 +1017,15 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({
         setError(apiError.message || "Failed to update timesheet");
       }
     },
-    [timeSlots, workdayHoursLookup, saveSlotsMutation, refetch, userId]
+    [
+      timeSlots,
+      workdayHoursLookup,
+      saveSlotsMutation,
+      refetch,
+      userId,
+      setOpenDropdowns,
+      handleDayTypeChange,
+    ]
   );
 
   const handleCloseError = () => {

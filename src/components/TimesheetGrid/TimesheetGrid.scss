@@ -61,23 +61,84 @@ $cell-editor-border-color: #1976d2;
   border: 1px solid #d0d0d0 !important;
 }
 
-// Leave type cells
+// Leave type cells with dropdown functionality
 .rg-cell.leave-type-cell {
   cursor: pointer !important;
-  transition: all 0.2s ease !important;
   font-size: 0.75rem !important;
   font-weight: 600 !important;
   text-align: center !important;
-  user-select: none !important;
+  position: relative !important;
+}
+
+// Global ReactGrid dropdown styles
+.rg-dropdown {
+  width: 100% !important;
+  min-height: 32px !important;
+  position: relative !important;
+}
+
+.rg-dropdown-button {
+  width: 100% !important;
+  padding: 4px 8px !important;
+  font-size: 0.75rem !important;
+  font-weight: 600 !important;
+  border: 1px solid #ddd !important;
+  background: white !important;
+  cursor: pointer !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
 
   &:hover {
-    transform: scale(1.05) !important;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15) !important;
-    filter: brightness(1.1) !important;
+    background: #f5f5f5 !important;
+    border-color: #1976d2 !important;
   }
 
-  &:active {
-    transform: scale(0.98) !important;
+  &:focus {
+    outline: 2px solid #1976d2 !important;
+    outline-offset: -2px !important;
+  }
+
+  // Dropdown arrow
+  &::after {
+    content: "▼" !important;
+    font-size: 0.6rem !important;
+    color: #666 !important;
+  }
+}
+
+.rg-dropdown-menu {
+  position: absolute !important;
+  top: 100% !important;
+  left: 0 !important;
+  right: 0 !important;
+  z-index: 1000 !important;
+  background: white !important;
+  border: 1px solid #ddd !important;
+  border-radius: 4px !important;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15) !important;
+  max-height: 200px !important;
+  overflow-y: auto !important;
+}
+
+.rg-dropdown-option {
+  padding: 8px 12px !important;
+  font-size: 0.75rem !important;
+  cursor: pointer !important;
+  border-bottom: 1px solid #f0f0f0 !important;
+
+  &:last-child {
+    border-bottom: none !important;
+  }
+
+  &:hover {
+    background: #f5f5f5 !important;
+  }
+
+  &.rg-dropdown-option-selected {
+    background: #e3f2fd !important;
+    color: #1976d2 !important;
+    font-weight: 600 !important;
   }
 }
 
