@@ -35,7 +35,6 @@ import {
 } from "date-fns";
 import {
   formatDateOrdinal,
-  calculateTotalAvailableHours,
   calculateTotalAvailableWorkHours,
   calculateTotalHoursWorked,
   calculateAveragePercentage,
@@ -129,7 +128,12 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({
     // Fill in defaults for dates without explicit hours
     periodDays.forEach((day) => {
       const dateStr = format(day, "yyyy-MM-dd");
-      if (!lookup[dateStr] && !disabledDates.includes(dateStr)) {
+      // Only add default hours for weekdays, exclude weekends and disabled dates
+      if (
+        !lookup[dateStr] &&
+        !disabledDates.includes(dateStr) &&
+        !isWeekend(day)
+      ) {
         lookup[dateStr] = DEFAULT_WORKDAY_HOURS;
       }
     });
@@ -145,10 +149,12 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({
       lookup[date] = getLeaveTypeFromDayEntry(entry);
     });
 
-    // Fill in defaults for dates without explicit entries (assume work days)
+    // Fill in defaults for dates without explicit entries
     periodDays.forEach((day) => {
       const dateStr = format(day, "yyyy-MM-dd");
       if (!lookup[dateStr]) {
+        // Weekends get "work" but will be handled specially in display logic
+        // Weekdays default to "work"
         lookup[dateStr] = "work";
       }
     });
@@ -251,8 +257,13 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({
     // Add date columns after the summary columns
     periodDays.forEach((day, index) => {
       const dateStr = format(day, "yyyy-MM-dd");
+      const isWeekendDay = isWeekend(day);
       if (index < 3) {
-        console.log(`📅 Creating column for ${dateStr} at index ${index + 5}`);
+        console.log(
+          `📅 Creating column for ${dateStr} at index ${index + 5} (${
+            isWeekendDay ? "Weekend" : "Weekday"
+          })`
+        );
       }
       cols.push({
         columnId: dateStr,
@@ -326,8 +337,9 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({
         grantId,
         periodDates
       );
-      const totalAvailableHours = calculateTotalAvailableHours(
-        workdayHoursLookup,
+      // Use enhanced calculation that excludes weekends and leave days
+      const totalAvailableHours = calculateTotalAvailableWorkHours(
+        workdayHoursData || {},
         periodDates
       );
       const averagePercentage = calculateAveragePercentage(
@@ -375,8 +387,17 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({
           (s: any) => s.Date === dateStr && s.GrantID === grantId
         );
         const isDisabled = enhancedDisabledDates.includes(dateStr);
-        // CHANGED: Use default workday hours if no workday entry exists yet
-        const maxHours = workdayHoursLookup[dateStr] || DEFAULT_WORKDAY_HOURS;
+        const isWeekendDay = isWeekend(day);
+        // Use default workday hours only for weekdays, weekends get 0 hours
+        const maxHours =
+          workdayHoursLookup[dateStr] ||
+          (isWeekendDay ? 0 : DEFAULT_WORKDAY_HOURS);
+
+        // Determine appropriate CSS class based on day type
+        let cellClassName = "editable-cell";
+        if (isDisabled) {
+          cellClassName = isWeekendDay ? "weekend-cell" : "disabled-cell";
+        }
 
         cells.push({
           type: "number",
@@ -385,7 +406,7 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({
           grantId: grantId,
           maxHours: maxHours,
           nonEditable: isDisabled,
-          className: isDisabled ? "disabled-cell" : "editable-cell",
+          className: cellClassName,
         } as NumberCell & { date: string; grantId: string; maxHours: number; nonEditable?: boolean; className: string });
       });
 
@@ -397,9 +418,10 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({
 
     // Add total hours available row (editable)
     const periodDates = periodDays.map((day) => format(day, "yyyy-MM-dd"));
-    const totalAvailableHours = periodDates.reduce(
-      (sum, date) => sum + (workdayHoursLookup[date] || 0),
-      0
+    // Use enhanced calculation that excludes weekends and leave days
+    const totalAvailableHours = calculateTotalAvailableWorkHours(
+      workdayHoursData || {},
+      periodDates
     );
     const totalAvailableValue = totalAvailableHours * hourlyRate;
     const dailyAvailableValue = totalAvailableValue / periodDates.length;
@@ -431,15 +453,24 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({
         ...periodDays.map((day) => {
           const dateStr = format(day, "yyyy-MM-dd");
           const isDisabled = enhancedDisabledDates.includes(dateStr);
+          const isWeekendDay = isWeekend(day);
+          // Use default workday hours only for weekdays, weekends get 0 hours
           const availableHours =
-            workdayHoursLookup[dateStr] || DEFAULT_WORKDAY_HOURS;
+            workdayHoursLookup[dateStr] ||
+            (isWeekendDay ? 0 : DEFAULT_WORKDAY_HOURS);
+
+          // Determine appropriate CSS class based on day type
+          let cellClassName = "editable-cell";
+          if (isDisabled) {
+            cellClassName = isWeekendDay ? "weekend-cell" : "disabled-cell";
+          }
 
           return {
             type: "number",
             value: availableHours,
             date: dateStr,
             nonEditable: isDisabled,
-            className: isDisabled ? "disabled-cell" : "editable-cell",
+            className: cellClassName,
           } as NumberCell & {
             date: string;
             nonEditable?: boolean;
@@ -542,46 +573,59 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({
         ...periodDays.map((day, index) => {
           const dateStr = format(day, "yyyy-MM-dd");
           const leaveType = leaveTypeLookup[dateStr] || "work"; // Ensure we always have a valid value
-          // Only disable weekends for dropdown, not leave days
           const isWeekendDay = isWeekend(day);
 
-          const isDropdownOpen = openDropdowns.has(dateStr);
-
-          const dropdownCell: DropdownCell = {
-            type: "dropdown",
-            selectedValue: leaveType,
-            values: leaveTypeOptions,
-            isDisabled: isWeekendDay, // Disable weekends
-            isOpen: isDropdownOpen,
-            inputValue: "", // Empty input value
-          };
-
-          // Debug logging for dropdown cell creation (only for first few cells)
+          // Debug logging for cell creation (only for first few cells)
           if (index < 3) {
             console.log(
-              `📋 Creating dropdown cell for ${dateStr} (index ${index}):`,
+              `📋 Creating day type cell for ${dateStr} (index ${index}):`,
               {
                 dateStr,
                 leaveType,
                 isWeekendDay,
-                selectedValue: dropdownCell.selectedValue,
-                isOpen: dropdownCell.isOpen,
+                cellType: isWeekendDay
+                  ? "text (weekend - empty)"
+                  : "dropdown (weekday)",
+                displayValue: isWeekendDay ? "empty string" : leaveType,
                 columnIndex: index + 5, // Now correctly +5 for the 5 summary columns
-                cellPosition: `Cell ${
-                  index + 5
-                } should be date column for ${dateStr}`,
+                alignment: "Should align with date column",
               }
             );
           }
 
-          return {
-            ...dropdownCell,
-            className: "leave-type-cell",
-            date: dateStr, // Store the date for debugging
-          } as DropdownCell & {
-            className: string;
-            date: string;
-          };
+          if (isWeekendDay) {
+            // For weekends, create a read-only text cell with empty text (no day type)
+            return {
+              type: "text",
+              text: "", // Empty string for weekends - they have no day type
+              className: "read-only-cell weekend-cell",
+              date: dateStr,
+            } as TextCell & {
+              className: string;
+              date: string;
+            };
+          } else {
+            // For weekdays, create an interactive dropdown cell
+            const isDropdownOpen = openDropdowns.has(dateStr);
+
+            const dropdownCell: DropdownCell = {
+              type: "dropdown",
+              selectedValue: leaveType,
+              values: leaveTypeOptions,
+              isDisabled: false, // Weekdays are interactive
+              isOpen: isDropdownOpen,
+              inputValue: "", // Empty input value
+            };
+
+            return {
+              ...dropdownCell,
+              className: "leave-type-cell",
+              date: dateStr, // Store the date for debugging
+            } as DropdownCell & {
+              className: string;
+              date: string;
+            };
+          }
         }),
       ],
     };
@@ -825,6 +869,18 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({
           );
           if (!dateInPeriod) {
             console.error("❌ Date not in current period:", actualDate);
+            continue;
+          }
+
+          // Additional validation: ensure this is not a weekend date (should not have dropdown)
+          const correspondingDay = periodDays.find(
+            (day) => format(day, "yyyy-MM-dd") === actualDate
+          );
+          if (correspondingDay && isWeekend(correspondingDay)) {
+            console.error(
+              "❌ Weekend dates should not have dropdown interactions:",
+              actualDate
+            );
             continue;
           }
 
@@ -1099,22 +1155,6 @@ export const TimesheetGrid: React.FC<TimesheetGridProps> = ({
               Selected: {selectedCell.value}h (Date:{" "}
               {format(new Date(selectedCell.columnId), "MMM dd")})
             </Typography>
-            <Button
-              variant="outlined"
-              size="small"
-              onClick={applyToRow}
-              disabled={disabledDates.includes(selectedCell.columnId)}
-            >
-              Apply to Row
-            </Button>
-            <Button
-              variant="outlined"
-              size="small"
-              onClick={applyToColumn}
-              disabled={selectedCell.columnId === "grant"}
-            >
-              Apply to Column
-            </Button>
           </Stack>
         </Box>
       )}
