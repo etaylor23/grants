@@ -60,3 +60,42 @@ $cell-editor-border-color: #1976d2;
   font-weight: 600 !important;
   border: 1px solid #d0d0d0 !important;
 }
+
+// Leave type cells
+.rg-cell.leave-type-cell {
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+  font-size: 0.75rem !important;
+  font-weight: 600 !important;
+  text-align: center !important;
+  user-select: none !important;
+
+  &:hover {
+    transform: scale(1.05) !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15) !important;
+    filter: brightness(1.1) !important;
+  }
+
+  &:active {
+    transform: scale(0.98) !important;
+  }
+}
+
+// Month header cells - simplified without sticky positioning
+.rg-cell.month-header-cell {
+  background-color: #1976d2 !important;
+  color: white !important;
+  font-weight: 700 !important;
+  font-size: 0.9rem !important;
+  text-align: center !important;
+  border-bottom: 2px solid #1565c0 !important;
+  border-right: 1px solid #1565c0 !important;
+  border-top: 1px solid #1565c0 !important;
+}
+
+.rg-cell.month-header-continuation {
+  background-color: #1976d2 !important;
+  border-bottom: 2px solid #1565c0 !important;
+  border-right: 1px solid #1565c0 !important;
+  border-top: 1px solid #1565c0 !important;
+}

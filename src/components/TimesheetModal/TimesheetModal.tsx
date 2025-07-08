@@ -44,15 +44,14 @@ export const TimesheetModal: React.FC<TimesheetModalProps> = ({
   // Get all dates in the period
   const allDates = eachDayOfInterval({ start: startDate, end: endDate });
 
-  // Filter out dates that are not workdays (these will be disabled)
-  const disabledDates = allDates
-    .filter(date => {
-      const dateStr = format(date, "yyyy-MM-dd");
-      return !workdays[dateStr] || workdays[dateStr] === 0;
-    })
-    .map(date => format(date, "yyyy-MM-dd"));
+  // REMOVED: Calendar entry dependency - no longer disable dates without workday entries
+  // Users can now allocate hours to any date, and workday entries will be auto-generated
+  const disabledDates: string[] = []; // Empty array - all dates are now enabled
 
-  const periodTitle = `${userName} - ${format(startDate, "MMM dd")} to ${format(endDate, "MMM dd, yyyy")}`;
+  const periodTitle = `${userName} - ${format(startDate, "MMM dd")} to ${format(
+    endDate,
+    "MMM dd, yyyy"
+  )}`;
 
   return (
     <Dialog
@@ -81,7 +80,7 @@ export const TimesheetModal: React.FC<TimesheetModalProps> = ({
           <CloseIcon />
         </IconButton>
       </DialogTitle>
-      
+
       <DialogContent dividers sx={{ p: 0, height: "100%" }}>
         <Box sx={{ height: "100%", p: 2 }}>
           <TimesheetGrid
@@ -95,7 +94,7 @@ export const TimesheetModal: React.FC<TimesheetModalProps> = ({
           />
         </Box>
       </DialogContent>
-      
+
       <DialogActions>
         <Button onClick={onClose} variant="contained">
           Close

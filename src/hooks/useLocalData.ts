@@ -112,6 +112,57 @@ export const useAllTimeSlots = () => {
   });
 };
 
+// Hook to save workday hours with leave type support
+export const useSaveWorkdayHours = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (data: {
+      userId: string;
+      year: number;
+      date: string;
+      entry: any; // DayEntry from schema
+    }) => {
+      const { db, generateWorkdayHoursKey } = await import("../db/schema");
+      const { userId, year, date, entry } = data;
+
+      const workdayHoursKey = generateWorkdayHoursKey(userId, year);
+
+      // Get existing workday hours record for this year
+      const existingRecord = await db.workdayHours.get([
+        userId,
+        workdayHoursKey,
+      ]);
+
+      if (existingRecord) {
+        // Update existing record
+        existingRecord.Hours[date] = entry;
+        await db.workdayHours.put(existingRecord);
+      } else {
+        // Create new record
+        await db.workdayHours.put({
+          PK: userId,
+          SK: workdayHoursKey,
+          Hours: { [date]: entry },
+        });
+      }
+    },
+    onSuccess: (_, variables) => {
+      // Invalidate workday hours queries
+      queryClient.invalidateQueries({
+        queryKey: ["workdayHours", variables.userId, variables.year],
+      });
+      // Also invalidate timeslots since workday changes affect timesheet validation
+      queryClient.invalidateQueries({
+        queryKey: ["timeslots", variables.userId],
+      });
+    },
+    onError: (error) => {
+      console.error("Save workday hours failed:", error);
+    },
+  });
+};
+
 export const useSaveSlots = () => {
   const queryClient = useQueryClient();
 
@@ -125,11 +176,17 @@ export const useSaveSlots = () => {
         grantId?: string;
       }>;
     }) => {
-      const { db, generateTimeSlotKey } = await import("../db/schema");
+      const {
+        db,
+        generateTimeSlotKey,
+        generateWorkdayHoursKey,
+        createWorkDayEntry,
+        getHoursFromDayEntry,
+      } = await import("../db/schema");
       const { userId, operations } = batchData;
 
-      // Execute operations in a transaction
-      await db.transaction("rw", [db.timeslots], async () => {
+      // Execute operations in a transaction (include workdayHours table)
+      await db.transaction("rw", [db.timeslots, db.workdayHours], async () => {
         for (const op of operations) {
           if (op.type === "put" && op.timeSlot) {
             const timeSlot = {
@@ -150,6 +207,37 @@ export const useSaveSlots = () => {
             };
 
             await db.timeslots.put(timeSlot);
+
+            // AUTO-GENERATE WORKDAY: Create workday entry if it doesn't exist
+            const date = timeSlot.Date;
+            const year = new Date(date).getFullYear();
+            const workdayHoursKey = generateWorkdayHoursKey(userId, year);
+
+            // Check if workday hours entry exists for this date
+            const existingWorkdayHours = await db.workdayHours.get([
+              userId,
+              workdayHoursKey,
+            ]);
+
+            if (!existingWorkdayHours || !existingWorkdayHours.Hours[date]) {
+              console.log(`Auto-generating workday entry for ${date}`);
+
+              // Create a work day entry using the new leave type system
+              const workDayEntry = createWorkDayEntry();
+
+              if (existingWorkdayHours) {
+                // Update existing record
+                existingWorkdayHours.Hours[date] = workDayEntry;
+                await db.workdayHours.put(existingWorkdayHours);
+              } else {
+                // Create new record
+                await db.workdayHours.put({
+                  PK: userId,
+                  SK: workdayHoursKey,
+                  Hours: { [date]: workDayEntry },
+                });
+              }
+            }
           } else if (op.type === "delete" && op.date && op.grantId) {
             const sk = generateTimeSlotKey(op.date, op.grantId);
             await db.timeslots.delete([userId, sk]);
@@ -161,6 +249,10 @@ export const useSaveSlots = () => {
       // Invalidate related queries
       queryClient.invalidateQueries({
         queryKey: ["timeslots", variables.userId],
+      });
+      // Also invalidate workday hours since we may have auto-generated entries
+      queryClient.invalidateQueries({
+        queryKey: ["workdayHours", variables.userId],
       });
     },
     onError: (error) => {

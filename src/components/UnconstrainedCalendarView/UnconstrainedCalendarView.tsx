@@ -3,7 +3,7 @@ import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
-import { Box, Typography, Button, Alert } from "@mui/material";
+import { Box, Typography } from "@mui/material";
 import {
   useWorkdayHours,
   useTimeSlots,
@@ -17,6 +17,7 @@ import {
   subMonths,
 } from "date-fns";
 import { generateUserColor } from "../../utils/colors";
+import { getHoursFromDayEntry } from "../../db/schema";
 import { EnhancedTimesheetModal } from "../EnhancedTimesheetModal";
 
 interface UnconstrainedCalendarViewProps {
@@ -30,7 +31,7 @@ export const UnconstrainedCalendarView: React.FC<
   UnconstrainedCalendarViewProps
 > = ({ userId, userName, organisationId, onDateSelect }) => {
   const [timesheetModalOpen, setTimesheetModalOpen] = useState(false);
-  const [calendarApi, setCalendarApi] = useState<any>(null);
+  // const [calendarApi, setCalendarApi] = useState<any>(null); // Unused for now
   const [currentDate, setCurrentDate] = useState(new Date());
 
   // Calculate current view period based on calendar's current view
@@ -96,7 +97,10 @@ export const UnconstrainedCalendarView: React.FC<
         (sum: number, slot: any) => sum + (slot.HoursAllocated || 0),
         0
       );
-      const availableHours = workdayHours[date] || 0;
+      const workdayEntry = workdayHours[date];
+      const availableHours = workdayEntry
+        ? getHoursFromDayEntry(workdayEntry)
+        : 0;
       const utilizationPercent =
         availableHours > 0 ? (totalHours / availableHours) * 100 : 0;
 
@@ -120,7 +124,7 @@ export const UnconstrainedCalendarView: React.FC<
 
       // Add individual grant events if there are multiple grants
       if (daySlots.length > 1) {
-        daySlots.forEach((slot: any, index: number) => {
+        daySlots.forEach((slot: any) => {
           const grant = grants.find((g) => g.PK === slot.GrantID);
           if (grant) {
             eventList.push({
@@ -153,45 +157,14 @@ export const UnconstrainedCalendarView: React.FC<
 
     try {
       // Check if this date already has workday hours
-      const existingHours = workdayHours[dateStr];
+      // const existingHours = workdayHours[dateStr]; // Unused in new flow
 
-      if (!existingHours || existingHours === 0) {
-        // Create a default workday entry (8 hours)
-        console.log("Creating workday entry for:", dateStr);
-        const { db, generateWorkdayHoursKey } = await import("../../db/schema");
-
-        const year = new Date(dateStr).getFullYear();
-        const workdayHoursKey = generateWorkdayHoursKey(userId, year);
-
-        // Get existing workday hours record for this year
-        const existingRecord = await db.workdayHours.get([
-          userId,
-          workdayHoursKey,
-        ]);
-
-        if (existingRecord) {
-          // Update existing record
-          existingRecord.Hours[dateStr] = 8;
-          await db.workdayHours.put(existingRecord);
-        } else {
-          // Create new record
-          await db.workdayHours.put({
-            PK: userId,
-            SK: workdayHoursKey,
-            Hours: { [dateStr]: 8 }, // Default 8 hours
-          });
-        }
-
-        console.log("✅ Workday entry created for", dateStr);
-
-        // Refresh workday hours data
-        // The useWorkdayHours hook should automatically refetch
-      }
-
-      // Open timesheet modal for this date
+      // REVERSE DATA FLOW: No longer auto-create workday entries on calendar click
+      // Workday entries are now auto-generated when timesheet hours are allocated
+      // Simply open the timesheet modal for any date
       setTimesheetModalOpen(true);
     } catch (error) {
-      console.error("❌ Failed to create workday entry:", error);
+      console.error("❌ Failed to open timesheet:", error);
     }
 
     onDateSelect?.(dateStr);
@@ -201,7 +174,7 @@ export const UnconstrainedCalendarView: React.FC<
     const { daySlots } = info.event.extendedProps;
     if (daySlots) {
       // Open timesheet modal for the clicked date
-      const clickedDate = new Date(info.event.start);
+      // const clickedDate = new Date(info.event.start); // Unused for now
       setTimesheetModalOpen(true);
     }
   };
@@ -278,7 +251,7 @@ export const UnconstrainedCalendarView: React.FC<
           <FullCalendar
             ref={(ref) => {
               if (ref) {
-                setCalendarApi(ref.getApi());
+                // setCalendarApi(ref.getApi()); // Commented out for now
               }
             }}
             plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}

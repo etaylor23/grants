@@ -17,7 +17,10 @@ import {
   subMonths,
 } from "date-fns";
 import { generateUserColor } from "../../utils/colors";
+import { getHoursFromDayEntry } from "../../db/schema";
 import { EnhancedTimesheetModal } from "../EnhancedTimesheetModal";
+import { DayTypeModal } from "../DayTypeModal";
+import { useSaveWorkdayHours } from "../../hooks/useLocalData";
 import styles from "../Layout/ModernContainer.module.css";
 
 interface LocalCalendarViewProps {
@@ -32,6 +35,8 @@ export const LocalCalendarView: React.FC<LocalCalendarViewProps> = ({
   onDateSelect,
 }) => {
   const [timesheetModalOpen, setTimesheetModalOpen] = useState(false);
+  const [dayTypeModalOpen, setDayTypeModalOpen] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<string>("");
   const [calendarApi, setCalendarApi] = useState<any>(null);
   const [currentDate, setCurrentDate] = useState(new Date());
 
@@ -52,6 +57,9 @@ export const LocalCalendarView: React.FC<LocalCalendarViewProps> = ({
   const { data: timeSlots = [] } = useTimeSlots(userId, periodStart, periodEnd);
   const { data: grants = [] } = useGrants();
 
+  // Mutations
+  const saveWorkdayHoursMutation = useSaveWorkdayHours();
+
   console.log("LocalCalendarView data:", {
     userId,
     userName,
@@ -67,56 +75,67 @@ export const LocalCalendarView: React.FC<LocalCalendarViewProps> = ({
     grantsCount: grants.length,
   });
 
-  // Create calendar events from workday hours and time slots
+  // REVERSE DATA FLOW: Create calendar events from timesheet allocations
   const events = useMemo(() => {
     const events: any[] = [];
     const userColor = generateUserColor(userName);
 
-    console.log("Creating calendar events...", {
-      workdayHoursEntries: Object.entries(workdayHours),
+    console.log("Creating calendar events from timesheet data...", {
       timeSlots,
+      workdayHours,
       userName,
       userColor,
     });
 
-    // Create events for each workday
-    Object.entries(workdayHours).forEach(([date, hours]) => {
-      console.log(`Processing date ${date} with ${hours} hours`);
+    // Group time slots by date to create calendar events
+    const slotsByDate = timeSlots.reduce(
+      (acc: Record<string, any[]>, slot: any) => {
+        if (!acc[slot.Date]) {
+          acc[slot.Date] = [];
+        }
+        acc[slot.Date].push(slot);
+        return acc;
+      },
+      {}
+    );
 
-      if (hours > 0) {
-        // Find time slots for this date
-        const daySlots = timeSlots.filter((slot: any) => slot.Date === date);
-        const totalHours = daySlots.reduce(
-          (sum, slot: any) => sum + (slot.HoursAllocated || 0),
-          0
-        );
-        const totalPercent = Math.round((totalHours / hours) * 100);
+    // Create events for each date that has time slot allocations
+    Object.entries(slotsByDate).forEach(([date, daySlots]) => {
+      const totalHours = daySlots.reduce(
+        (sum, slot: any) => sum + (slot.HoursAllocated || 0),
+        0
+      );
 
-        console.log(
-          `Date ${date}: ${daySlots.length} slots, ${totalHours}h total`
-        );
+      // Get available hours from workday hours, or use default if auto-generated
+      const availableHours = workdayHours[date]
+        ? getHoursFromDayEntry(workdayHours[date])
+        : 8;
+      const totalPercent = Math.round((totalHours / availableHours) * 100);
 
-        const event = {
-          id: `workday-${userId}-${date}`,
-          title: `${userName}: ${totalHours}h / ${hours}h (${totalPercent}%)`,
-          date,
-          backgroundColor: userColor,
-          borderColor: "transparent",
-          textColor: "white",
-          allDay: true,
-          extendedProps: {
-            userId,
-            userName,
-            totalHours,
-            availableHours: hours,
-            totalPercent,
-            daySlots,
-          },
-        };
+      console.log(
+        `Date ${date}: ${daySlots.length} slots, ${totalHours}h total, ${availableHours}h available`
+      );
 
-        console.log(`Created event for ${date}:`, event);
-        events.push(event);
-      }
+      const event = {
+        id: `workday-${userId}-${date}`,
+        title: `${userName}: ${totalHours}h / ${availableHours}h (${totalPercent}%)`,
+        date,
+        backgroundColor: userColor,
+        borderColor: "transparent",
+        textColor: "white",
+        allDay: true,
+        extendedProps: {
+          userId,
+          userName,
+          totalHours,
+          availableHours,
+          totalPercent,
+          daySlots,
+        },
+      };
+
+      console.log(`Created event for ${date}:`, event);
+      events.push(event);
     });
 
     // If no events were created, add some test events to verify click functionality
@@ -216,50 +235,25 @@ export const LocalCalendarView: React.FC<LocalCalendarViewProps> = ({
     const dateStr = info.dateStr;
     console.log("📅 Date clicked:", dateStr, info);
 
-    try {
-      // Check if this date already has workday hours
-      const existingHours = workdayHours[dateStr];
+    // Store selected date for modals
+    setSelectedDate(dateStr);
 
-      if (!existingHours || existingHours === 0) {
-        // Create a default workday entry (8 hours)
-        console.log("Creating workday entry for:", dateStr);
-        const { db, generateWorkdayHoursKey } = await import("../../db/schema");
-
-        const year = new Date(dateStr).getFullYear();
-        const workdayHoursKey = generateWorkdayHoursKey(userId, year);
-
-        // Get existing workday hours record for this year
-        const existingRecord = await db.workdayHours.get([
-          userId,
-          workdayHoursKey,
-        ]);
-
-        if (existingRecord) {
-          // Update existing record
-          existingRecord.Hours[dateStr] = 8;
-          await db.workdayHours.put(existingRecord);
-        } else {
-          // Create new record
-          await db.workdayHours.put({
-            PK: userId,
-            SK: workdayHoursKey,
-            Hours: { [dateStr]: 8 }, // Default 8 hours
-          });
-        }
-
-        console.log("✅ Workday entry created for", dateStr);
-
-        // Refresh workday hours data
-        // The useWorkdayHours hook should automatically refetch
-      }
-
-      // Open timesheet modal for this date
-      setTimesheetModalOpen(true);
-    } catch (error) {
-      console.error("❌ Failed to create workday entry:", error);
-    }
-
+    // For now, open timesheet modal directly
+    // TODO: Could add context menu or modifier key detection for day type editing
+    setTimesheetModalOpen(true);
     onDateSelect?.(dateStr);
+  };
+
+  const handleDayTypeSave = async (entry: any) => {
+    if (!selectedDate) return;
+
+    const year = new Date(selectedDate).getFullYear();
+    await saveWorkdayHoursMutation.mutateAsync({
+      userId,
+      year,
+      date: selectedDate,
+      entry,
+    });
   };
 
   const handleEventClick = (info: any) => {
@@ -472,16 +466,37 @@ export const LocalCalendarView: React.FC<LocalCalendarViewProps> = ({
         userName={userName}
       />
 
+      {/* Day Type Modal */}
+      <DayTypeModal
+        open={dayTypeModalOpen}
+        onClose={() => setDayTypeModalOpen(false)}
+        onSave={handleDayTypeSave}
+        date={selectedDate}
+        currentEntry={selectedDate ? workdayHours[selectedDate] : undefined}
+        userName={userName}
+      />
+
       {/* Info Alert */}
       <Alert severity="info" sx={{ mb: 3 }}>
         <Typography variant="body2">
-          <strong>How to use:</strong> Click on any calendar day to create a
-          workday entry and open the timesheet. Click on existing workday events
-          to edit allocations.
+          <strong>How to use:</strong> Click on any calendar day to open the
+          timesheet. Right-click or use Shift+Click to edit day type
+          (work/leave).
           <br />
           <strong>Event details:</strong> Shows hours allocated vs available
           hours and percentage utilization.
           <br />
+          <strong>Leave Management:</strong>
+          <Button
+            size="small"
+            onClick={() => {
+              setSelectedDate(format(new Date(), "yyyy-MM-dd"));
+              setDayTypeModalOpen(true);
+            }}
+            sx={{ ml: 1, mr: 1 }}
+          >
+            Edit Day Types
+          </Button>
           <strong>Debug:</strong>
           <Button
             size="small"

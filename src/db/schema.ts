@@ -34,10 +34,24 @@ export interface Workday {
   Workdays: Record<string, boolean>; // Object with date keys: { "2025-01-04": true, ... }
 }
 
+// Leave types supported by the system
+export type LeaveType =
+  | "work"
+  | "annual-leave"
+  | "sick-leave"
+  | "public-holiday"
+  | "other";
+
+export interface DayEntry {
+  hours: number; // Available hours for the day
+  type: LeaveType; // Type of day (work, leave, etc.)
+  note?: string; // Optional note for leave days
+}
+
 export interface WorkdayHours {
   PK: string; // UserID
   SK: string; // "WORKDAY_HOURS#YYYY" - e.g., "WORKDAY_HOURS#2025"
-  Hours: Record<string, number>; // Object with date keys: { "2025-01-04": 8, ... }
+  Hours: Record<string, number | DayEntry>; // Object with date keys: { "2025-01-04": 8, "2025-01-05": { hours: 0, type: "annual-leave", note: "Vacation" } }
 }
 
 export interface TimeSlot {
@@ -243,3 +257,49 @@ export const validateHoursAllocated = (
 
 // Default available hours per workday
 export const DEFAULT_WORKDAY_HOURS = 8;
+
+// Helper functions for leave type system
+export const createWorkDayEntry = (
+  hours: number = DEFAULT_WORKDAY_HOURS
+): DayEntry => ({
+  hours,
+  type: "work",
+});
+
+export const createLeaveEntry = (type: LeaveType, note?: string): DayEntry => ({
+  hours: 0,
+  type,
+  note,
+});
+
+// Helper to get hours from a day entry (backward compatibility)
+export const getHoursFromDayEntry = (entry: number | DayEntry): number => {
+  if (typeof entry === "number") {
+    return entry; // Backward compatibility with old numeric format
+  }
+  return entry.hours;
+};
+
+// Helper to get leave type from a day entry
+export const getLeaveTypeFromDayEntry = (
+  entry: number | DayEntry
+): LeaveType => {
+  if (typeof entry === "number") {
+    return entry > 0 ? "work" : "work"; // Assume work day for backward compatibility
+  }
+  return entry.type;
+};
+
+// Helper to check if a day is a work day (has available hours for allocation)
+export const isWorkDay = (entry: number | DayEntry): boolean => {
+  return (
+    getHoursFromDayEntry(entry) > 0 &&
+    getLeaveTypeFromDayEntry(entry) === "work"
+  );
+};
+
+// Helper to check if a day is a leave day
+export const isLeaveDay = (entry: number | DayEntry): boolean => {
+  const type = getLeaveTypeFromDayEntry(entry);
+  return type !== "work";
+};
