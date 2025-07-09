@@ -1,0 +1,296 @@
+/* Enhanced App Layout Styles */
+
+.appBar {
+  background: linear-gradient(135deg, #1976d2 0%, #1565c0 100%);
+  box-shadow: 0 4px 20px rgba(25, 118, 210, 0.3);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.toolbar {
+  min-height: 64px;
+  padding: 0 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* Header Section */
+.headerSection {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+  flex: 1;
+  min-width: 0; /* Allow content to shrink */
+}
+
+.brandSection {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  flex-shrink: 0;
+}
+
+.appTitle {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: white;
+  margin: 0;
+  line-height: 1.2;
+}
+
+.appSubtitle {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.8);
+  margin: 0;
+  line-height: 1.2;
+  font-weight: 400;
+}
+
+.breadcrumbsSection {
+  margin-left: 1rem;
+  flex: 1;
+  min-width: 0;
+}
+
+/* Navigation Controls Section */
+.navigationControls {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+  flex-shrink: 0;
+}
+
+.primaryControls {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.secondaryControls {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+/* Action Buttons Section */
+.actionSection {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-left: 1.5rem;
+  padding-left: 1.5rem;
+  border-left: 1px solid rgba(255, 255, 255, 0.2);
+  flex-shrink: 0;
+}
+
+.actionButton {
+  color: white !important;
+  border-color: rgba(255, 255, 255, 0.5) !important;
+  text-transform: none !important;
+  font-weight: 500 !important;
+  transition: all 0.2s ease-in-out !important;
+  min-width: 120px;
+}
+
+.actionButton:hover {
+  border-color: white !important;
+  background-color: rgba(255, 255, 255, 0.1) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.actionButton.primary {
+  background-color: rgba(255, 255, 255, 0.15) !important;
+  border-color: rgba(255, 255, 255, 0.7) !important;
+}
+
+.actionButton.primary:hover {
+  background-color: rgba(255, 255, 255, 0.25) !important;
+  border-color: white !important;
+}
+
+/* Mobile Menu Button */
+.mobileMenuButton {
+  color: white !important;
+  margin-right: 1rem;
+}
+
+/* Drawer Styles */
+.drawer {
+  width: 280px;
+  flex-shrink: 0;
+}
+
+.drawerPaper {
+  width: 280px;
+  box-sizing: border-box;
+  border-right: 1px solid rgba(0, 0, 0, 0.08);
+  background: #fafafa;
+}
+
+.drawerHeader {
+  display: flex;
+  align-items: center;
+  padding: 0 1rem;
+  min-height: 64px;
+  justify-content: flex-end;
+  background: white;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+/* Main Content */
+.mainContent {
+  flex-grow: 1;
+  margin-top: 64px; /* Account for AppBar height */
+  height: calc(100vh - 64px);
+  background-color: #ffffff;
+  overflow-y: auto;
+}
+
+.contentWrapper {
+  padding: 1.5rem;
+  min-height: calc(100vh - 64px - 3rem); /* Full height minus AppBar and padding */
+}
+
+/* Responsive Design */
+@media (max-width: 1200px) {
+  .navigationControls {
+    gap: 1.5rem;
+  }
+  
+  .actionSection {
+    margin-left: 1rem;
+    padding-left: 1rem;
+  }
+  
+  .breadcrumbsSection {
+    display: none; /* Hide breadcrumbs on smaller screens */
+  }
+}
+
+@media (max-width: 960px) {
+  .toolbar {
+    padding: 0 1rem;
+  }
+  
+  .headerSection {
+    gap: 1rem;
+  }
+  
+  .navigationControls {
+    gap: 1rem;
+  }
+  
+  .primaryControls {
+    gap: 1rem;
+  }
+  
+  .appSubtitle {
+    display: none; /* Hide subtitle on mobile */
+  }
+}
+
+@media (max-width: 768px) {
+  .toolbar {
+    padding: 0 0.75rem;
+  }
+  
+  .headerSection {
+    gap: 0.75rem;
+  }
+  
+  .navigationControls {
+    gap: 0.75rem;
+  }
+  
+  .actionSection {
+    display: none; /* Hide action buttons on mobile - move to drawer */
+  }
+  
+  .appTitle {
+    font-size: 1.25rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .toolbar {
+    padding: 0 0.5rem;
+  }
+  
+  .secondaryControls {
+    display: none; /* Hide secondary controls on very small screens */
+  }
+  
+  .appTitle {
+    font-size: 1.125rem;
+  }
+}
+
+/* Context Transition Animations */
+.contextTransition {
+  animation: contextSwitch 0.3s ease-in-out;
+}
+
+@keyframes contextSwitch {
+  0% {
+    opacity: 0.8;
+    transform: translateY(-2px);
+  }
+  50% {
+    opacity: 0.9;
+    transform: translateY(1px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Focus and Accessibility */
+.focusVisible {
+  outline: 2px solid rgba(255, 255, 255, 0.8);
+  outline-offset: 2px;
+}
+
+/* Loading States */
+.loadingOverlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+/* High Contrast Mode Support */
+@media (prefers-contrast: high) {
+  .appBar {
+    background: #000;
+    border-bottom: 2px solid #fff;
+  }
+  
+  .actionButton {
+    border-width: 2px !important;
+  }
+  
+  .actionSection {
+    border-left-width: 2px;
+  }
+}
+
+/* Reduced Motion Support */
+@media (prefers-reduced-motion: reduce) {
+  .actionButton,
+  .contextTransition {
+    transition: none !important;
+    animation: none !important;
+  }
+  
+  .actionButton:hover {
+    transform: none;
+  }
+}

@@ -1,13 +1,16 @@
 import React from "react";
-import { Breadcrumbs, Link, Typography, Box, Chip } from "@mui/material";
+import { Typography, Box } from "@mui/material";
 import {
   NavigateNext as NavigateNextIcon,
-  Public as GlobalIcon,
+  Home as HomeIcon,
   Business as OrganizationIcon,
+  Assignment as GrantIcon,
+  CalendarToday as CalendarIcon,
 } from "@mui/icons-material";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useBreadcrumbs, useScopeInfo } from "../../utils/breadcrumbUtils";
 import { useGrants, useOrganisations } from "../../hooks/useLocalData";
+import classes from "./EnhancedBreadcrumbs.module.css";
 
 interface HeaderBreadcrumbsProps {
   /**
@@ -18,11 +21,21 @@ interface HeaderBreadcrumbsProps {
    * Whether to show the breadcrumbs (useful for conditional rendering)
    */
   show?: boolean;
+  /**
+   * Whether to use flat design instead of circular breadcrumbs
+   */
+  flat?: boolean;
+  /**
+   * Whether to use compact mode for smaller screens
+   */
+  compact?: boolean;
 }
 
 export const HeaderBreadcrumbs: React.FC<HeaderBreadcrumbsProps> = ({
   sx = {},
   show = true,
+  flat = false,
+  compact = false,
 }) => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -47,6 +60,19 @@ export const HeaderBreadcrumbs: React.FC<HeaderBreadcrumbsProps> = ({
     navigate(path);
   };
 
+  // Helper function to get icon for breadcrumb item
+  const getBreadcrumbIcon = (item: any) => {
+    if (item.path === "/")
+      return <HomeIcon className={classes.breadcrumbIcon} />;
+    if (item.path.includes("/calendar"))
+      return <CalendarIcon className={classes.breadcrumbIcon} />;
+    if (item.path.includes("/grants"))
+      return <GrantIcon className={classes.breadcrumbIcon} />;
+    if (item.path.includes("/organisation"))
+      return <OrganizationIcon className={classes.breadcrumbIcon} />;
+    return null;
+  };
+
   // Don't render if show is false or if we're on the home page
   if (!show || location.pathname === "/" || breadcrumbs.length <= 1) {
     return null;
@@ -54,92 +80,63 @@ export const HeaderBreadcrumbs: React.FC<HeaderBreadcrumbsProps> = ({
 
   return (
     <Box
-      sx={{
-        display: "flex",
-        alignItems: "center",
-        gap: 2,
-        minHeight: "32px", // Ensure consistent height
-        ...sx,
-      }}
+      className={`${classes.breadcrumbContainer} ${flat ? classes.flat : ""} ${
+        scopeInfo.isGlobal ? classes.global : classes.organization
+      }`}
+      sx={sx}
     >
-      {/* Scope Indicator */}
-      <Chip
-        icon={scopeInfo.isGlobal ? <GlobalIcon /> : <OrganizationIcon />}
-        label={
-          scopeInfo.isGlobal
-            ? "Global"
-            : scopeInfo.organizationName || "Organization"
-        }
-        size="small"
-        variant={scopeInfo.isGlobal ? "outlined" : "filled"}
-        sx={{
-          backgroundColor: scopeInfo.isGlobal
-            ? "transparent"
-            : "rgba(255, 255, 255, 0.2)",
-          color: "rgba(255, 255, 255, 0.9)",
-          borderColor: "rgba(255, 255, 255, 0.5)",
-          "& .MuiChip-icon": {
-            color: "rgba(255, 255, 255, 0.9)",
-          },
-          fontSize: "0.75rem",
-        }}
-      />
-      <Breadcrumbs
-        separator={<NavigateNextIcon fontSize="small" />}
-        aria-label="breadcrumb"
-        sx={{
-          "& .MuiBreadcrumbs-separator": {
-            color: "rgba(255, 255, 255, 0.7)",
-            mx: 1,
-          },
-          "& .MuiBreadcrumbs-ol": {
-            flexWrap: "nowrap", // Prevent wrapping in header
-          },
-        }}
-      >
-        {breadcrumbs.map((item, index) => {
-          const isLast = index === breadcrumbs.length - 1;
+      {breadcrumbs.map((item, index) => {
+        const isLast = index === breadcrumbs.length - 1;
+        const isLoading = orgsLoading || grantsLoading;
 
-          if (isLast) {
-            return (
+        if (isLast) {
+          return (
+            <Box
+              key={item.path}
+              className={`${classes.breadcrumbItem} ${classes.active} ${
+                isLoading ? classes.breadcrumbLoading : ""
+              }`}
+            >
+              {getBreadcrumbIcon(item)}
               <Typography
-                key={item.path}
-                sx={{
-                  fontWeight: 500,
-                  color: "rgba(255, 255, 255, 0.9)",
-                  fontSize: "0.875rem",
-                  whiteSpace: "nowrap",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  maxWidth: "200px", // Prevent very long names from breaking layout
-                }}
+                className={`${classes.breadcrumbText} ${
+                  compact ? classes.compact : ""
+                }`}
+              >
+                {isLoading ? "Loading..." : item.label}
+              </Typography>
+            </Box>
+          );
+        }
+
+        return (
+          <React.Fragment key={item.path}>
+            <Box
+              className={`${classes.breadcrumbItem} ${classes.breadcrumbTransition}`}
+              onClick={handleClick(item.path)}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  handleClick(item.path)(e as any);
+                }
+              }}
+            >
+              {getBreadcrumbIcon(item)}
+              <Typography
+                className={`${classes.breadcrumbText} ${
+                  compact ? classes.compact : ""
+                }`}
               >
                 {item.label}
               </Typography>
-            );
-          }
-
-          return (
-            <Link
-              key={item.path}
-              href={item.path}
-              onClick={handleClick(item.path)}
-              sx={{
-                color: "rgba(255, 255, 255, 0.7)",
-                textDecoration: "none",
-                fontSize: "0.875rem",
-                whiteSpace: "nowrap",
-                "&:hover": {
-                  color: "rgba(255, 255, 255, 0.9)",
-                  textDecoration: "underline",
-                },
-              }}
-            >
-              {item.label}
-            </Link>
-          );
-        })}
-      </Breadcrumbs>
+            </Box>
+            {!flat && (
+              <NavigateNextIcon className={classes.breadcrumbSeparator} />
+            )}
+          </React.Fragment>
+        );
+      })}
     </Box>
   );
 };

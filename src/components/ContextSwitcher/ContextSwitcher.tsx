@@ -1,10 +1,8 @@
 import React, { useState } from "react";
 import {
   Box,
-  Button,
   Menu,
   MenuItem,
-  Chip,
   Typography,
   Divider,
   ListItemIcon,
@@ -13,25 +11,31 @@ import {
 import {
   Public as GlobalIcon,
   Business as OrganizationIcon,
-  ExpandMore as ExpandMoreIcon,
   Dashboard as DashboardIcon,
   CalendarToday as CalendarIcon,
   Assignment as GrantIcon,
+  SwapHoriz as SwitchIcon,
 } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
 import { useScopeInfo } from "../../utils/breadcrumbUtils";
 import { createContextTransitionManager } from "../../utils/contextTransitions";
 import { useOrganisations } from "../../hooks/useLocalData";
+import classes from "./EnhancedContextIndicator.module.css";
 
 interface ContextSwitcherProps {
   /**
    * Custom styling
    */
   sx?: object;
+  /**
+   * Whether to show in compact mode (for mobile)
+   */
+  compact?: boolean;
 }
 
 export const ContextSwitcher: React.FC<ContextSwitcherProps> = ({
   sx = {},
+  compact = false,
 }) => {
   const navigate = useNavigate();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
@@ -78,94 +82,105 @@ export const ContextSwitcher: React.FC<ContextSwitcherProps> = ({
 
   return (
     <Box sx={sx}>
-      <Button
+      <Box
+        className={`${classes.contextIndicator} ${
+          compact ? classes.compact : ""
+        } ${scopeInfo.isGlobal ? "" : classes.contextTransition}`}
         onClick={handleClick}
-        endIcon={<ExpandMoreIcon />}
-        sx={{
-          color: "rgba(255, 255, 255, 0.9)",
-          textTransform: "none",
-          "&:hover": {
-            backgroundColor: "rgba(255, 255, 255, 0.1)",
-          },
+        role="button"
+        aria-label="Switch context"
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            handleClick(e as any);
+          }
         }}
       >
-        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-          <Chip
-            icon={scopeInfo.isGlobal ? <GlobalIcon /> : <OrganizationIcon />}
-            label={
-              scopeInfo.isGlobal
-                ? "Global"
-                : scopeInfo.organizationName || "Organization"
-            }
-            size="small"
-            variant={scopeInfo.isGlobal ? "outlined" : "filled"}
-            sx={{
-              backgroundColor: scopeInfo.isGlobal
-                ? "transparent"
-                : "rgba(255, 255, 255, 0.2)",
-              color: "rgba(255, 255, 255, 0.9)",
-              borderColor: "rgba(255, 255, 255, 0.5)",
-              "& .MuiChip-icon": {
-                color: "rgba(255, 255, 255, 0.9)",
-              },
-            }}
-          />
-          <Typography
-            variant="body2"
-            sx={{ color: "rgba(255, 255, 255, 0.7)" }}
-          >
-            Switch Context
-          </Typography>
+        {/* Context Badge */}
+        <Box
+          className={`${classes.contextBadge} ${
+            scopeInfo.isGlobal ? classes.global : classes.organization
+          }`}
+        >
+          {scopeInfo.isGlobal ? (
+            <GlobalIcon className={classes.icon} />
+          ) : (
+            <OrganizationIcon className={classes.icon} />
+          )}
+          {scopeInfo.isGlobal ? "Global" : "Org"}
         </Box>
-      </Button>
+
+        {/* Context Info */}
+        {!compact && (
+          <Box className={classes.contextInfo}>
+            <Typography className={classes.contextLabel}>
+              {scopeInfo.isGlobal ? "Global Context" : "Organization"}
+            </Typography>
+            <Typography
+              className={`${classes.contextName} ${
+                compact ? classes.compact : ""
+              }`}
+            >
+              {scopeInfo.isGlobal
+                ? "All Organizations"
+                : scopeInfo.organizationName || "Unknown Organization"}
+            </Typography>
+          </Box>
+        )}
+
+        {/* Switch Indicator */}
+        <Box className={classes.switchIndicator}>
+          <SwitchIcon className={classes.switchIcon} />
+        </Box>
+      </Box>
 
       <Menu
         anchorEl={anchorEl}
         open={Boolean(anchorEl)}
         onClose={handleClose}
         PaperProps={{
-          sx: {
-            minWidth: 280,
-            maxHeight: 400,
-            overflow: "auto",
-          },
+          className: classes.contextMenu,
         }}
         transformOrigin={{ horizontal: "right", vertical: "top" }}
         anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
       >
         {/* Global Options */}
-        <Box sx={{ px: 2, py: 1 }}>
-          <Typography
-            variant="overline"
-            sx={{ fontWeight: 600, color: "#1976d2" }}
-          >
-            Global Views
-          </Typography>
+        <Box className={classes.menuSection}>
+          <Box className={classes.menuSectionHeader}>
+            <Typography
+              className={`${classes.menuSectionTitle} ${classes.global}`}
+            >
+              Global Views
+            </Typography>
+          </Box>
+          {globalOptions.map((option) => (
+            <MenuItem
+              key={option.path}
+              onClick={() => handleGlobalNavigation(option.path)}
+              className={`${classes.menuItem} ${
+                scopeInfo.isGlobal && window.location.pathname === option.path
+                  ? classes.active
+                  : ""
+              }`}
+            >
+              <ListItemIcon className={classes.menuItemIcon}>
+                {option.icon}
+              </ListItemIcon>
+              <ListItemText
+                primary={option.label}
+                className={classes.menuItemText}
+              />
+            </MenuItem>
+          ))}
         </Box>
-        {globalOptions.map((option) => (
-          <MenuItem
-            key={option.path}
-            onClick={() => handleGlobalNavigation(option.path)}
-            sx={{
-              py: 1,
-              "&:hover": {
-                backgroundColor: "rgba(25, 118, 210, 0.04)",
-              },
-            }}
-          >
-            <ListItemIcon sx={{ color: "#1976d2" }}>{option.icon}</ListItemIcon>
-            <ListItemText primary={option.label} />
-          </MenuItem>
-        ))}
 
         {/* Organizations */}
         {organisations.length > 0 && (
-          <>
-            <Divider sx={{ my: 1 }} />
-            <Box sx={{ px: 2, py: 1 }}>
+          <Box className={classes.menuSection}>
+            <Divider />
+            <Box className={classes.menuSectionHeader}>
               <Typography
-                variant="overline"
-                sx={{ fontWeight: 600, color: "#2e7d32" }}
+                className={`${classes.menuSectionTitle} ${classes.organization}`}
               >
                 Organizations
               </Typography>
@@ -176,35 +191,25 @@ export const ContextSwitcher: React.FC<ContextSwitcherProps> = ({
                   onClick={() =>
                     handleOrganizationNavigation(org.CompanyNumber)
                   }
-                  sx={{
-                    py: 1,
-                    backgroundColor:
-                      scopeInfo.organizationId === org.CompanyNumber
-                        ? "rgba(46, 125, 50, 0.08)"
-                        : "transparent",
-                    "&:hover": {
-                      backgroundColor: "rgba(46, 125, 50, 0.04)",
-                    },
-                  }}
+                  className={`${classes.menuItem} ${
+                    scopeInfo.organizationId === org.CompanyNumber
+                      ? `${classes.active} ${classes.organization}`
+                      : ""
+                  }`}
                 >
-                  <ListItemIcon sx={{ color: "#2e7d32" }}>
+                  <ListItemIcon className={classes.menuItemIcon}>
                     <OrganizationIcon />
                   </ListItemIcon>
                   <ListItemText
                     primary={org.Name}
                     secondary={`Company: ${org.CompanyNumber}`}
-                    primaryTypographyProps={{
-                      fontWeight:
-                        scopeInfo.organizationId === org.CompanyNumber
-                          ? 600
-                          : 400,
-                    }}
+                    className={classes.menuItemText}
                   />
                 </MenuItem>
 
                 {/* Quick organization actions */}
                 {scopeInfo.organizationId === org.CompanyNumber && (
-                  <Box sx={{ pl: 4, pb: 1 }}>
+                  <Box className={classes.organizationSubmenu}>
                     <MenuItem
                       onClick={() =>
                         handleOrganizationNavigation(
@@ -212,15 +217,12 @@ export const ContextSwitcher: React.FC<ContextSwitcherProps> = ({
                           "/calendar"
                         )
                       }
-                      sx={{ py: 0.5, minHeight: "auto" }}
+                      className={classes.submenuItem}
                     >
-                      <ListItemIcon sx={{ minWidth: 32 }}>
-                        <CalendarIcon fontSize="small" />
+                      <ListItemIcon className={classes.submenuItemIcon}>
+                        <CalendarIcon />
                       </ListItemIcon>
-                      <ListItemText
-                        primary="Calendar"
-                        primaryTypographyProps={{ fontSize: "0.875rem" }}
-                      />
+                      <ListItemText primary="Calendar" />
                     </MenuItem>
                     <MenuItem
                       onClick={() =>
@@ -229,27 +231,24 @@ export const ContextSwitcher: React.FC<ContextSwitcherProps> = ({
                           "/grants"
                         )
                       }
-                      sx={{ py: 0.5, minHeight: "auto" }}
+                      className={classes.submenuItem}
                     >
-                      <ListItemIcon sx={{ minWidth: 32 }}>
-                        <GrantIcon fontSize="small" />
+                      <ListItemIcon className={classes.submenuItemIcon}>
+                        <GrantIcon />
                       </ListItemIcon>
-                      <ListItemText
-                        primary="Grants"
-                        primaryTypographyProps={{ fontSize: "0.875rem" }}
-                      />
+                      <ListItemText primary="Grants" />
                     </MenuItem>
                   </Box>
                 )}
               </Box>
             ))}
-          </>
+          </Box>
         )}
 
         {/* No organizations message */}
         {organisations.length === 0 && (
-          <>
-            <Divider sx={{ my: 1 }} />
+          <Box className={classes.menuSection}>
+            <Divider />
             <Box sx={{ px: 2, py: 2, textAlign: "center" }}>
               <Typography variant="body2" color="text.secondary">
                 No organizations found
@@ -258,7 +257,7 @@ export const ContextSwitcher: React.FC<ContextSwitcherProps> = ({
                 Create an organization to access organization-specific views
               </Typography>
             </Box>
-          </>
+          </Box>
         )}
       </Menu>
     </Box>

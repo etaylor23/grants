@@ -7,6 +7,8 @@ import {
   IconButton,
   Box,
   Button,
+  useMediaQuery,
+  useTheme,
 } from "@mui/material";
 import { Menu as MenuIcon, Add as AddIcon } from "@mui/icons-material";
 // IndexedDB only - no legacy dependencies
@@ -17,6 +19,7 @@ import { ContextTransition } from "../ContextTransition";
 import { Individual } from "../../db/schema";
 import { CreateGrantModal } from "../CreateGrantModal";
 import { HeaderBreadcrumbs } from "../HeaderBreadcrumbs";
+import classes from "./EnhancedAppLayout.module.css";
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -33,6 +36,9 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
 }) => {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [createGrantModalOpen, setCreateGrantModalOpen] = useState(false);
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
+  const isTablet = useMediaQuery(theme.breakpoints.down("lg"));
 
   const toggleDrawer = () => {
     setDrawerOpen(!drawerOpen);
@@ -42,76 +48,77 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
     <Box sx={{ display: "flex", height: "100vh" }}>
       <AppBar
         position="fixed"
+        className={classes.appBar}
         sx={{ zIndex: (theme) => theme.zIndex.drawer + 1 }}
       >
-        <Toolbar>
+        <Toolbar className={classes.toolbar}>
+          {/* Mobile Menu Button */}
           <IconButton
-            color="inherit"
+            className={classes.mobileMenuButton}
             aria-label="open drawer"
             onClick={toggleDrawer}
             edge="start"
-            sx={{ mr: 2 }}
           >
             <MenuIcon />
           </IconButton>
-          <Box sx={{ flexGrow: 1 }}>
-            <Box sx={{ display: "flex", alignItems: "center", gap: 3 }}>
-              <Box>
-                <Typography
-                  variant="h6"
-                  noWrap
-                  component="div"
-                  sx={{ fontWeight: 600 }}
-                >
-                  GrantGrid
-                </Typography>
-                <Typography
-                  variant="caption"
-                  sx={{ color: "rgba(255, 255, 255, 0.7)", fontSize: "0.7rem" }}
-                >
+
+          {/* Header Section */}
+          <Box className={classes.headerSection}>
+            {/* Brand Section */}
+            <Box className={classes.brandSection}>
+              <Typography className={classes.appTitle}>GrantGrid</Typography>
+              {!isMobile && (
+                <Typography className={classes.appSubtitle}>
                   Your workforce, mapped to funding
                 </Typography>
-              </Box>
-
-              {/* Breadcrumbs positioned after the title */}
-              <HeaderBreadcrumbs
-                sx={{
-                  ml: 2,
-                  display: { xs: "none", sm: "flex" }, // Hide on mobile to save space
-                }}
-              />
+              )}
             </Box>
+
+            {/* Breadcrumbs Section - Hide on mobile and tablet */}
+            {!isTablet && (
+              <Box className={classes.breadcrumbsSection}>
+                <HeaderBreadcrumbs
+                  flat={false}
+                  compact={isMobile}
+                  show={!isMobile}
+                />
+              </Box>
+            )}
           </Box>
 
-          {/* Context Switcher and User Controls */}
-          <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-            <ContextSwitcher />
+          {/* Navigation Controls */}
+          <Box className={classes.navigationControls}>
+            {/* Primary Controls */}
+            <Box className={classes.primaryControls}>
+              <ContextSwitcher compact={isMobile} />
 
-            {onUserChange && (
-              <>
+              {/* Secondary User Control - Show based on context and screen size */}
+              {onUserChange && !isMobile && (
                 <UserPicker
                   selectedUserId={selectedUserId || null}
                   onUserChange={onUserChange}
                   organisationId={organisationId}
+                  compact={isTablet}
+                  showContextIndicator={false} // Context already shown in ContextSwitcher
                 />
+              )}
+            </Box>
 
-                <Button
-                  variant="outlined"
-                  size="small"
-                  startIcon={<AddIcon />}
-                  onClick={() => setCreateGrantModalOpen(true)}
-                  sx={{
-                    color: "white",
-                    borderColor: "rgba(255, 255, 255, 0.5)",
-                    "&:hover": {
-                      borderColor: "white",
-                      backgroundColor: "rgba(255, 255, 255, 0.1)",
-                    },
-                  }}
-                >
-                  Create Grant
-                </Button>
-              </>
+            {/* Action Buttons - Separated from navigation, hidden on mobile */}
+            {!isMobile && (
+              <Box className={classes.actionSection}>
+                {onUserChange && (
+                  <Button
+                    className={`${classes.actionButton} ${classes.primary}`}
+                    variant="outlined"
+                    size="small"
+                    startIcon={<AddIcon />}
+                    onClick={() => setCreateGrantModalOpen(true)}
+                  >
+                    {isTablet ? "Create" : "Create Grant"}
+                  </Button>
+                )}
+              </Box>
             )}
           </Box>
         </Toolbar>
@@ -121,32 +128,52 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
         variant="temporary"
         open={drawerOpen}
         onClose={toggleDrawer}
+        className={classes.drawer}
         ModalProps={{
           keepMounted: true, // Better open performance on mobile.
         }}
-        sx={{
-          "& .MuiDrawer-paper": {
-            boxSizing: "border-box",
-            width: 280,
-          },
+        PaperProps={{
+          className: classes.drawerPaper,
         }}
       >
-        <Toolbar />
+        <Box className={classes.drawerHeader}>
+          <IconButton onClick={toggleDrawer}>
+            <MenuIcon />
+          </IconButton>
+        </Box>
         <DynamicSidebar organizationId={organisationId} />
+
+        {/* Mobile Action Buttons - Show in drawer on mobile */}
+        {isMobile && onUserChange && (
+          <Box sx={{ p: 2, borderTop: "1px solid rgba(0, 0, 0, 0.08)" }}>
+            <Button
+              variant="contained"
+              fullWidth
+              startIcon={<AddIcon />}
+              onClick={() => {
+                setCreateGrantModalOpen(true);
+                toggleDrawer();
+              }}
+              sx={{ mb: 1 }}
+            >
+              Create Grant
+            </Button>
+            {/* Mobile User Picker */}
+            <UserPicker
+              selectedUserId={selectedUserId || null}
+              onUserChange={onUserChange}
+              organisationId={organisationId}
+              compact={true}
+              showContextIndicator={true}
+            />
+          </Box>
+        )}
       </Drawer>
 
-      <Box
-        component="main"
-        sx={{
-          flexGrow: 1,
-          mt: 8, // Account for AppBar height
-          height: "calc(100vh - 64px)",
-          backgroundColor: "#ffffff",
-        }}
-      >
+      <Box component="main" className={classes.mainContent}>
         {/* Main Content with Context Transitions */}
         <ContextTransition animateOnContextChange>
-          <Box sx={{ p: 3 }}>{children}</Box>
+          <Box className={classes.contentWrapper}>{children}</Box>
         </ContextTransition>
       </Box>
 
