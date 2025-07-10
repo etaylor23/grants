@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useParams, Navigate } from "react-router-dom";
 import { Box, Typography } from "@mui/material";
 import { AppLayout } from "../components/Layout/AppLayout";
@@ -12,6 +12,8 @@ export const OrganisationCalendarPage: React.FC = () => {
   const { orgNumber } = useParams<{ orgNumber: string }>();
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [selectedUser, setSelectedUser] = useState<Individual | null>(null);
+  const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
+  const [selectedUsers, setSelectedUsers] = useState<Individual[]>([]);
 
   const { data: organisations = [], isLoading: orgsLoading } =
     useOrganisations();
@@ -24,6 +26,20 @@ export const OrganisationCalendarPage: React.FC = () => {
   );
 
   const isLoading = orgsLoading || individualsLoading;
+
+  // Filter individuals by organisation
+  const individuals = allIndividuals.filter(
+    (individual) => individual.OrganisationID === organisation?.PK
+  );
+
+  // Auto-select all team members from the organization when the page loads
+  useEffect(() => {
+    if (individuals.length > 0 && selectedUserIds.length === 0) {
+      const userIds = individuals.map((ind) => ind.PK);
+      setSelectedUserIds(userIds);
+      setSelectedUsers(individuals);
+    }
+  }, [individuals, selectedUserIds.length]);
 
   // Only redirect if data has finished loading and organisation is still not found
   if (!orgsLoading && !organisation) {
@@ -49,14 +65,14 @@ export const OrganisationCalendarPage: React.FC = () => {
     );
   }
 
-  // Filter individuals by organisation
-  const individuals = allIndividuals.filter(
-    (individual) => individual.OrganisationID === organisation.PK
-  );
-
   const handleUserChange = (userId: string, user: Individual) => {
     setSelectedUserId(userId);
     setSelectedUser(user);
+  };
+
+  const handleUsersChange = (userIds: string[], users: Individual[]) => {
+    setSelectedUserIds(userIds);
+    setSelectedUsers(users);
   };
 
   const handleDateSelect = (date: string) => {
@@ -64,7 +80,14 @@ export const OrganisationCalendarPage: React.FC = () => {
   };
 
   return (
-    <AppLayout selectedUserId={selectedUserId} onUserChange={handleUserChange}>
+    <AppLayout
+      selectedUserId={selectedUserId}
+      selectedUserIds={selectedUserIds}
+      onUserChange={handleUserChange}
+      onUsersChange={handleUsersChange}
+      organisationId={organisation?.PK}
+      multiSelect={true}
+    >
       <Box sx={{ p: 3 }}>
         {/* Header */}
         <Box
@@ -91,8 +114,12 @@ export const OrganisationCalendarPage: React.FC = () => {
           organizationId={orgNumber}
           selectedUserId={selectedUserId}
           selectedUser={selectedUser}
+          selectedUserIds={selectedUserIds}
+          selectedUsers={selectedUsers}
           onUserChange={handleUserChange}
+          onUsersChange={handleUsersChange}
           onDateSelect={handleDateSelect}
+          multiSelect={true}
         />
       </Box>
     </AppLayout>

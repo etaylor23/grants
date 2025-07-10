@@ -287,8 +287,17 @@ export const SmartCalendar: React.FC<SmartCalendarProps> = ({
             <UnconstrainedCalendarView
               userId={primaryUser.PK}
               userName={`${primaryUser.FirstName} ${primaryUser.LastName}`}
+              userIds={selectedUsers.map((u) => u.PK)}
+              userNames={selectedUsers.map(
+                (u) => `${u.FirstName} ${u.LastName}`
+              )}
+              users={selectedUsers.map((u) => ({
+                id: u.PK,
+                name: `${u.FirstName} ${u.LastName}`,
+              }))}
               organisationId={org?.PK || ""}
               onDateSelect={onDateSelect}
+              multiUser={true}
             />
           </Box>
         );

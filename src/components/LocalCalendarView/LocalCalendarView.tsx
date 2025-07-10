@@ -250,18 +250,18 @@ export const LocalCalendarView: React.FC<LocalCalendarViewProps> = ({
 
         const event = {
           id: `workday-${user.id}-${date}`,
-          title: `${user.name}: ${totalHours}h / ${availableHours}h (${totalPercent}%)`,
+          title: `${totalHours.toFixed(1)}h / ${availableHours}h`,
           date,
           backgroundColor: userColor,
-          borderColor: "transparent",
-          textColor: "white",
+          borderColor: userColor,
+          textColor: "#ffffff",
           allDay: true,
           extendedProps: {
             userId: user.id,
             userName: user.name,
             totalHours,
             availableHours,
-            totalPercent,
+            utilizationPercent: totalPercent,
             daySlots,
             multiUser,
             targetUsers,
@@ -546,8 +546,12 @@ export const LocalCalendarView: React.FC<LocalCalendarViewProps> = ({
             dayMaxEvents={3}
             moreLinkClick="popover"
             eventContent={(eventInfo) => {
-              const { totalHours, availableHours, userName } =
-                eventInfo.event.extendedProps;
+              const {
+                totalHours,
+                availableHours,
+                userName,
+                utilizationPercent,
+              } = eventInfo.event.extendedProps;
 
               // Get user initials for avatar
               const getUserInitials = (name: string) => {
@@ -558,67 +562,59 @@ export const LocalCalendarView: React.FC<LocalCalendarViewProps> = ({
                   .toUpperCase();
               };
 
-              const utilizationPercent = Math.round(
-                (totalHours / availableHours) * 100
-              );
-
-              return (
-                <Box
-                  sx={{
-                    p: 0.5,
-                    overflow: "hidden",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 0.5,
-                    height: "100%",
-                    minHeight: "32px",
-                  }}
-                >
-                  {/* User Avatar (leftmost) */}
+              if (multiUser) {
+                // Multi-user mode: Show user avatar and utilization
+                return (
                   <Box
                     sx={{
-                      width: 35,
-                      height: 35,
-                      borderRadius: "50%",
-                      backgroundColor: "rgba(255, 255, 255, 0.3)",
                       display: "flex",
                       alignItems: "center",
-                      justifyContent: "center",
-                      fontSize: "0.65rem",
-                      fontWeight: "bold",
-                      color: "white",
-                      flexShrink: 0,
-                    }}
-                  >
-                    {getUserInitials(userName || "U")}
-                  </Box>
-
-                  {/* Hours (center) */}
-                  <Typography
-                    variant="caption"
-                    sx={{
-                      fontWeight: "bold",
+                      gap: 0.5,
+                      p: 0.5,
                       fontSize: "0.75rem",
-                      flex: 1,
-                      textAlign: "center",
+                      fontWeight: 500,
                     }}
                   >
-                    {totalHours}h/{availableHours}h
-                  </Typography>
-
-                  {/* Utilization percentage (rightmost) */}
-                  <Typography
-                    variant="caption"
-                    sx={{
-                      fontSize: "0.7rem",
-                      fontWeight: "500",
-                      flexShrink: 0,
-                    }}
-                  >
-                    {utilizationPercent}%
-                  </Typography>
-                </Box>
-              );
+                    <Box
+                      sx={{
+                        width: 20,
+                        height: 20,
+                        borderRadius: "50%",
+                        backgroundColor: "rgba(255, 255, 255, 0.2)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontSize: "0.6rem",
+                        fontWeight: 600,
+                        color: "white",
+                        flexShrink: 0,
+                      }}
+                    >
+                      {getUserInitials(userName)}
+                    </Box>
+                    <Box sx={{ minWidth: 0, flex: 1 }}>
+                      <Box sx={{ fontWeight: 600, lineHeight: 1 }}>
+                        {totalHours.toFixed(1)}h/{availableHours}h
+                      </Box>
+                      <Box sx={{ fontSize: "0.65rem", opacity: 0.9 }}>
+                        {utilizationPercent.toFixed(0)}%
+                      </Box>
+                    </Box>
+                  </Box>
+                );
+              } else {
+                // Single-user mode: Match UnconstrainedCalendarView format exactly
+                return (
+                  <Box sx={{ p: 0.5, fontSize: "0.75rem" }}>
+                    <Box sx={{ fontWeight: 600 }}>
+                      {totalHours.toFixed(1)}h / {availableHours}h
+                    </Box>
+                    <Box sx={{ fontSize: "0.65rem", opacity: 0.9 }}>
+                      {utilizationPercent.toFixed(0)}% utilized
+                    </Box>
+                  </Box>
+                );
+              }
             }}
           />
         </Box>
