@@ -29,29 +29,49 @@ interface SmartCalendarProps {
    */
   organizationId?: string;
   /**
-   * Selected user ID
+   * Selected user ID (legacy single-select)
    */
   selectedUserId?: string | null;
   /**
-   * Selected user object
+   * Selected user object (legacy single-select)
    */
   selectedUser?: Individual | null;
   /**
-   * User change handler
+   * Selected user IDs (multi-select)
+   */
+  selectedUserIds?: string[];
+  /**
+   * Selected user objects (multi-select)
+   */
+  selectedUsers?: Individual[];
+  /**
+   * User change handler (legacy single-select)
    */
   onUserChange?: (userId: string, user: Individual) => void;
+  /**
+   * Users change handler (multi-select)
+   */
+  onUsersChange?: (userIds: string[], users: Individual[]) => void;
   /**
    * Date select handler
    */
   onDateSelect?: (date: string) => void;
+  /**
+   * Enable multi-select mode
+   */
+  multiSelect?: boolean;
 }
 
 export const SmartCalendar: React.FC<SmartCalendarProps> = ({
   organizationId,
   selectedUserId,
   selectedUser,
+  selectedUserIds = [],
+  selectedUsers = [],
   onUserChange,
+  onUsersChange,
   onDateSelect,
+  multiSelect = true,
 }) => {
   const navigate = useNavigate();
   const { data: organisations = [] } = useOrganisations();
@@ -180,7 +200,12 @@ export const SmartCalendar: React.FC<SmartCalendarProps> = ({
   };
 
   const renderCalendarContent = () => {
-    if (!selectedUser) {
+    // Check if we have any selected users (single or multi-select)
+    const hasSelectedUsers = multiSelect
+      ? selectedUsers.length > 0
+      : selectedUser !== null;
+
+    if (!hasSelectedUsers) {
       return (
         <Box
           sx={{
@@ -193,10 +218,12 @@ export const SmartCalendar: React.FC<SmartCalendarProps> = ({
         >
           <PersonIcon sx={{ fontSize: 48, color: "text.secondary", mb: 2 }} />
           <Typography variant="h6" color="text.secondary" sx={{ mb: 1 }}>
-            Select a team member to view their calendar
+            {multiSelect
+              ? "Select team members to view their calendars"
+              : "Select a team member to view their calendar"}
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            Use the user picker in the top navigation to select a team member
+            Use the user picker in the top navigation to select team members
           </Typography>
           {filteredIndividuals.length === 0 && (
             <Alert severity="info" sx={{ mt: 2, maxWidth: 400, mx: "auto" }}>
@@ -215,28 +242,83 @@ export const SmartCalendar: React.FC<SmartCalendarProps> = ({
       );
     }
 
-    // Determine which calendar component to use based on context
-    if (scopeInfo.isGlobal) {
-      return (
-        <LocalCalendarView
-          userId={selectedUser.PK}
-          userName={`${selectedUser.FirstName} ${selectedUser.LastName}`}
-          onDateSelect={onDateSelect}
-        />
-      );
-    } else {
-      const org = organisations.find(
-        (o) => o.CompanyNumber === scopeInfo.organizationId
-      );
-      return (
-        <UnconstrainedCalendarView
-          userId={selectedUser.PK}
-          userName={`${selectedUser.FirstName} ${selectedUser.LastName}`}
-          organisationId={org?.PK || ""}
-          onDateSelect={onDateSelect}
-        />
-      );
+    // Determine which calendar component to use based on context and mode
+    if (multiSelect && selectedUsers.length > 0) {
+      // Multi-user mode: render a combined view or multiple views
+      // For now, we'll render the first selected user's calendar
+      // TODO: Implement proper multi-user calendar view
+      const primaryUser = selectedUsers[0];
+
+      if (scopeInfo.isGlobal) {
+        return (
+          <Box>
+            <Typography variant="h6" sx={{ mb: 2 }}>
+              Showing calendar for {selectedUsers.length} selected user
+              {selectedUsers.length > 1 ? "s" : ""}:{" "}
+              {selectedUsers
+                .map((u) => `${u.FirstName} ${u.LastName}`)
+                .join(", ")}
+            </Typography>
+            <LocalCalendarView
+              userId={primaryUser.PK}
+              userName={`${primaryUser.FirstName} ${primaryUser.LastName}`}
+              users={selectedUsers.map((u) => ({
+                id: u.PK,
+                name: `${u.FirstName} ${u.LastName}`,
+              }))}
+              multiUser={true}
+              onDateSelect={onDateSelect}
+            />
+          </Box>
+        );
+      } else {
+        const org = organisations.find(
+          (o) => o.CompanyNumber === scopeInfo.organizationId
+        );
+        return (
+          <Box>
+            <Typography variant="h6" sx={{ mb: 2 }}>
+              Showing calendar for {selectedUsers.length} selected user
+              {selectedUsers.length > 1 ? "s" : ""}:{" "}
+              {selectedUsers
+                .map((u) => `${u.FirstName} ${u.LastName}`)
+                .join(", ")}
+            </Typography>
+            <UnconstrainedCalendarView
+              userId={primaryUser.PK}
+              userName={`${primaryUser.FirstName} ${primaryUser.LastName}`}
+              organisationId={org?.PK || ""}
+              onDateSelect={onDateSelect}
+            />
+          </Box>
+        );
+      }
+    } else if (selectedUser) {
+      // Single-user mode
+      if (scopeInfo.isGlobal) {
+        return (
+          <LocalCalendarView
+            userId={selectedUser.PK}
+            userName={`${selectedUser.FirstName} ${selectedUser.LastName}`}
+            onDateSelect={onDateSelect}
+          />
+        );
+      } else {
+        const org = organisations.find(
+          (o) => o.CompanyNumber === scopeInfo.organizationId
+        );
+        return (
+          <UnconstrainedCalendarView
+            userId={selectedUser.PK}
+            userName={`${selectedUser.FirstName} ${selectedUser.LastName}`}
+            organisationId={org?.PK || ""}
+            onDateSelect={onDateSelect}
+          />
+        );
+      }
     }
+
+    return null;
   };
 
   return (

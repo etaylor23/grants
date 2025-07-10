@@ -20,18 +20,36 @@ jest.mock("../UserPicker", () => ({
     compact,
     showContextIndicator,
     selectedUserId,
+    selectedUserIds,
     onUserChange,
+    onUsersChange,
+    multiSelect,
   }: {
     compact?: boolean;
     showContextIndicator?: boolean;
-    selectedUserId: string | null;
-    onUserChange: (userId: string, user: any) => void;
+    selectedUserId?: string | null;
+    selectedUserIds?: string[];
+    onUserChange?: (userId: string, user: any) => void;
+    onUsersChange?: (userIds: string[], users: any[]) => void;
+    multiSelect?: boolean;
   }) => (
     <div
       data-testid="user-picker"
       data-compact={compact}
       data-show-context={showContextIndicator}
-      onClick={() => onUserChange?.("test-user", { id: "test-user" })}
+      data-multi-select={multiSelect}
+      data-selected-user-id={selectedUserId}
+      data-selected-user-ids={selectedUserIds?.join(",")}
+      onClick={() => {
+        if (multiSelect && onUsersChange) {
+          onUsersChange(
+            ["test-user-1", "test-user-2"],
+            [{ id: "test-user-1" }, { id: "test-user-2" }]
+          );
+        } else if (onUserChange) {
+          onUserChange("test-user", { id: "test-user" });
+        }
+      }}
     >
       User Picker
     </div>
@@ -133,7 +151,7 @@ describe("AppLayout Navigation Design", () => {
         </AppLayout>
       );
 
-      expect(screen.getByText("GrantGrid")).toBeInTheDocument();
+      expect(screen.getByText("Grantura")).toBeInTheDocument();
       expect(
         screen.getByText("Your workforce, mapped to funding")
       ).toBeInTheDocument();
@@ -325,12 +343,125 @@ describe("AppLayout Navigation Design", () => {
       );
 
       // App title should be present
-      expect(screen.getByText("GrantGrid")).toBeInTheDocument();
+      expect(screen.getByText("Grantura")).toBeInTheDocument();
 
       // All major navigation components should be present
       expect(screen.getByTestId("context-switcher")).toBeInTheDocument();
       expect(screen.getByTestId("user-picker")).toBeInTheDocument();
       expect(screen.getByTestId("header-breadcrumbs")).toBeInTheDocument();
+    });
+  });
+
+  describe("Multi-Select Functionality", () => {
+    const mockUsersChange = jest.fn();
+
+    beforeEach(() => {
+      mockUsersChange.mockClear();
+    });
+
+    it("renders UserPicker in multi-select mode", () => {
+      renderWithProviders(
+        <AppLayout
+          selectedUserIds={["user-1", "user-2"]}
+          onUsersChange={mockUsersChange}
+          multiSelect={true}
+        >
+          <div>Test Content</div>
+        </AppLayout>
+      );
+
+      const userPicker = screen.getByTestId("user-picker");
+      expect(userPicker).toBeInTheDocument();
+      expect(userPicker).toHaveAttribute("data-multi-select", "true");
+      expect(userPicker).toHaveAttribute(
+        "data-selected-user-ids",
+        "user-1,user-2"
+      );
+    });
+
+    it("handles multi-user selection", async () => {
+      renderWithProviders(
+        <AppLayout
+          selectedUserIds={[]}
+          onUsersChange={mockUsersChange}
+          multiSelect={true}
+        >
+          <div>Test Content</div>
+        </AppLayout>
+      );
+
+      const userPicker = screen.getByTestId("user-picker");
+      fireEvent.click(userPicker);
+
+      await waitFor(() => {
+        expect(mockUsersChange).toHaveBeenCalledWith(
+          ["test-user-1", "test-user-2"],
+          [{ id: "test-user-1" }, { id: "test-user-2" }]
+        );
+      });
+    });
+
+    it("supports explicit single-select mode", () => {
+      renderWithProviders(
+        <AppLayout
+          selectedUserId="user-1"
+          onUserChange={mockUserChange}
+          multiSelect={false}
+        >
+          <div>Test Content</div>
+        </AppLayout>
+      );
+
+      const userPicker = screen.getByTestId("user-picker");
+      expect(userPicker).toHaveAttribute("data-multi-select", "true");
+      expect(userPicker).toHaveAttribute("data-selected-user-id", "user-1");
+    });
+
+    it("prioritizes multi-select props when both are provided", () => {
+      renderWithProviders(
+        <AppLayout
+          selectedUserId="user-1"
+          selectedUserIds={["user-2", "user-3"]}
+          onUserChange={mockUserChange}
+          onUsersChange={mockUsersChange}
+          multiSelect={true}
+        >
+          <div>Test Content</div>
+        </AppLayout>
+      );
+
+      const userPicker = screen.getByTestId("user-picker");
+      expect(userPicker).toHaveAttribute("data-multi-select", "true");
+      expect(userPicker).toHaveAttribute(
+        "data-selected-user-ids",
+        "user-2,user-3"
+      );
+    });
+
+    it("handles empty selectedUserIds array", () => {
+      renderWithProviders(
+        <AppLayout
+          selectedUserIds={[]}
+          onUsersChange={mockUsersChange}
+          multiSelect={true}
+        >
+          <div>Test Content</div>
+        </AppLayout>
+      );
+
+      const userPicker = screen.getByTestId("user-picker");
+      expect(userPicker).toHaveAttribute("data-selected-user-ids", "");
+    });
+
+    it("defaults multiSelect to true", () => {
+      renderWithProviders(
+        <AppLayout selectedUserId="user-1" onUserChange={mockUserChange}>
+          <div>Test Content</div>
+        </AppLayout>
+      );
+
+      const userPicker = screen.getByTestId("user-picker");
+      expect(userPicker).toHaveAttribute("data-multi-select", "true");
     });
   });
 });

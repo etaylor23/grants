@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from "react";
+import React, { useState, useMemo, useCallback, useEffect } from "react";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
@@ -16,23 +16,31 @@ import {
   addMonths,
   subMonths,
 } from "date-fns";
-import { generateUserColor } from "../../utils/colors";
+import { generatePastelColor } from "../../utils/colors";
 import { getHoursFromDayEntry } from "../../db/schema";
 import { EnhancedTimesheetModal } from "../EnhancedTimesheetModal";
 import { DayTypeModal } from "../DayTypeModal";
 import { useSaveWorkdayHours } from "../../hooks/useLocalData";
-import styles from "../Layout/ModernContainer.module.css";
+// import styles from "../Layout/ModernContainer.module.css"; // Unused for now
 
 interface LocalCalendarViewProps {
-  userId: string;
-  userName: string;
+  userId?: string; // Legacy single-user support
+  userName?: string; // Legacy single-user support
+  userIds?: string[]; // Multi-user support
+  userNames?: string[]; // Multi-user support
+  users?: Array<{ id: string; name: string }>; // Alternative multi-user format
   onDateSelect?: (date: string) => void;
+  multiUser?: boolean;
 }
 
 export const LocalCalendarView: React.FC<LocalCalendarViewProps> = ({
   userId,
   userName,
+  userIds = [],
+  userNames = [],
+  users = [],
   onDateSelect,
+  multiUser = true,
 }) => {
   const [timesheetModalOpen, setTimesheetModalOpen] = useState(false);
   const [dayTypeModalOpen, setDayTypeModalOpen] = useState(false);
@@ -52,90 +60,217 @@ export const LocalCalendarView: React.FC<LocalCalendarViewProps> = ({
   const periodStart = format(extendedStart, "yyyy-MM-dd");
   const periodEnd = format(extendedEnd, "yyyy-MM-dd");
 
-  // Fetch data from IndexedDB
-  const { data: workdayHours = {} } = useWorkdayHours(userId, year);
-  const { data: timeSlots = [] } = useTimeSlots(userId, periodStart, periodEnd);
+  // Determine which users to fetch data for
+  const targetUsers = useMemo(() => {
+    if (multiUser) {
+      if (users && users.length > 0) {
+        return users.map((u) => ({ id: u.id, name: u.name }));
+      } else if (userIds && userIds.length > 0) {
+        return userIds.map((id, index) => ({
+          id,
+          name: (userNames && userNames[index]) || `User ${index + 1}`,
+        }));
+      }
+    } else if (userId && userName) {
+      return [{ id: userId, name: userName }];
+    }
+    return [];
+  }, [
+    multiUser,
+    users?.length,
+    userIds?.length,
+    userNames?.length,
+    userId,
+    userName,
+  ]);
+
+  // Fetch data from IndexedDB for all target users
   const { data: grants = [] } = useGrants();
+
+  // For multi-user mode, we'll use a simpler approach that fetches data on-demand
+  // This avoids the Rules of Hooks violation while still supporting multiple users
+  const [multiUserData, setMultiUserData] = useState<
+    Record<string, { workdayHours: any; timeSlots: any[] }>
+  >({});
+
+  // Fetch data for the primary user (always safe to call hooks)
+  const primaryUserId =
+    targetUsers.length > 0 ? targetUsers[0].id : userId || "";
+  const { data: primaryWorkdayHours = {} } = useWorkdayHours(
+    primaryUserId,
+    year
+  );
+  const { data: primaryTimeSlots = [] } = useTimeSlots(
+    primaryUserId,
+    periodStart,
+    periodEnd
+  );
+
+  // Effect to fetch data for additional users when targetUsers changes
+  useEffect(() => {
+    const fetchMultiUserData = async () => {
+      if (targetUsers.length <= 1) {
+        setMultiUserData({});
+        return;
+      }
+
+      const { db } = await import("../../db/schema");
+      const newData: Record<string, { workdayHours: any; timeSlots: any[] }> =
+        {};
+
+      for (const user of targetUsers) {
+        try {
+          // Fetch workday hours
+          const workdayHoursResult = await db.workdayHours.get([
+            user.id,
+            `${user.id}-${year}`,
+          ]);
+          const workdayHours = workdayHoursResult?.Hours || {};
+
+          // Fetch time slots
+          const allSlots = await db.timeslots
+            .where("PK")
+            .equals(user.id)
+            .toArray();
+          const timeSlots = allSlots.filter(
+            (slot) => slot.Date >= periodStart && slot.Date <= periodEnd
+          );
+
+          newData[user.id] = { workdayHours, timeSlots };
+        } catch (error) {
+          console.warn(`Failed to fetch data for user ${user.id}:`, error);
+          newData[user.id] = { workdayHours: {}, timeSlots: [] };
+        }
+      }
+
+      setMultiUserData(newData);
+    };
+
+    fetchMultiUserData();
+  }, [targetUsers, year, periodStart, periodEnd]);
+
+  // Combine all user data
+  const combinedUserData = useMemo(() => {
+    return targetUsers.map((user) => {
+      if (user.id === primaryUserId) {
+        // Use React Query data for primary user
+        return {
+          user,
+          workdayHours: primaryWorkdayHours,
+          timeSlots: primaryTimeSlots,
+        };
+      } else {
+        // Use manually fetched data for additional users
+        const userData = multiUserData[user.id] || {
+          workdayHours: {},
+          timeSlots: [],
+        };
+        return {
+          user,
+          workdayHours: userData.workdayHours,
+          timeSlots: userData.timeSlots,
+        };
+      }
+    });
+  }, [
+    targetUsers,
+    primaryUserId,
+    primaryWorkdayHours,
+    primaryTimeSlots,
+    multiUserData,
+  ]);
+
+  // Legacy support: primary user data for single-user operations
+  const primaryUserData = combinedUserData[0] || {
+    workdayHours: {},
+    timeSlots: [],
+  };
 
   // Mutations
   const saveWorkdayHoursMutation = useSaveWorkdayHours();
 
+  // Get primary user info for display
+  const primaryUserName =
+    targetUsers.length > 0 ? targetUsers[0].name : userName || "Unknown User";
+
   console.log("LocalCalendarView data:", {
-    userId,
-    userName,
+    multiUser,
+    targetUsers,
+    primaryUserId,
     currentDate: format(currentDate, "yyyy-MM-dd"),
     periodStart,
     periodEnd,
     year,
-    workdayHours,
-    workdayHoursCount: Object.keys(workdayHours).length,
-    timeSlots,
-    timeSlotsCount: timeSlots.length,
-    grants,
+    combinedUserData,
     grantsCount: grants.length,
   });
 
   // REVERSE DATA FLOW: Create calendar events from timesheet allocations
   const events = useMemo(() => {
     const events: any[] = [];
-    const userColor = generateUserColor(userName);
 
     console.log("Creating calendar events from timesheet data...", {
-      timeSlots,
-      workdayHours,
-      userName,
-      userColor,
+      combinedUserData,
+      targetUsers,
     });
 
-    // Group time slots by date to create calendar events
-    const slotsByDate = timeSlots.reduce(
-      (acc: Record<string, any[]>, slot: any) => {
-        if (!acc[slot.Date]) {
-          acc[slot.Date] = [];
-        }
-        acc[slot.Date].push(slot);
-        return acc;
-      },
-      {}
-    );
+    // Create events for each user separately
+    combinedUserData.forEach((userData) => {
+      const { user, workdayHours, timeSlots } = userData;
+      const userColor = generatePastelColor(user.name);
 
-    // Create events for each date that has time slot allocations
-    Object.entries(slotsByDate).forEach(([date, daySlots]) => {
-      const totalHours = daySlots.reduce(
-        (sum, slot: any) => sum + (slot.HoursAllocated || 0),
-        0
-      );
-
-      // Get available hours from workday hours, or use default if auto-generated
-      const availableHours = workdayHours[date]
-        ? getHoursFromDayEntry(workdayHours[date])
-        : 8;
-      const totalPercent = Math.round((totalHours / availableHours) * 100);
-
-      console.log(
-        `Date ${date}: ${daySlots.length} slots, ${totalHours}h total, ${availableHours}h available`
-      );
-
-      const event = {
-        id: `workday-${userId}-${date}`,
-        title: `${userName}: ${totalHours}h / ${availableHours}h (${totalPercent}%)`,
-        date,
-        backgroundColor: userColor,
-        borderColor: "transparent",
-        textColor: "white",
-        allDay: true,
-        extendedProps: {
-          userId,
-          userName,
-          totalHours,
-          availableHours,
-          totalPercent,
-          daySlots,
+      // Group time slots by date for this user
+      const slotsByDate = timeSlots.reduce(
+        (acc: Record<string, any[]>, slot: any) => {
+          if (!acc[slot.Date]) {
+            acc[slot.Date] = [];
+          }
+          acc[slot.Date].push(slot);
+          return acc;
         },
-      };
+        {}
+      );
 
-      console.log(`Created event for ${date}:`, event);
-      events.push(event);
+      // Create events for each date that has time slot allocations for this user
+      Object.entries(slotsByDate).forEach(([date, daySlots]) => {
+        const totalHours = daySlots.reduce(
+          (sum: number, slot: any) => sum + (slot.HoursAllocated || 0),
+          0
+        );
+
+        // Get available hours from workday hours, or use default if auto-generated
+        const availableHours = workdayHours[date]
+          ? getHoursFromDayEntry(workdayHours[date])
+          : 8;
+        const totalPercent = Math.round((totalHours / availableHours) * 100);
+
+        console.log(
+          `User ${user.name} - Date ${date}: ${daySlots.length} slots, ${totalHours}h total, ${availableHours}h available`
+        );
+
+        const event = {
+          id: `workday-${user.id}-${date}`,
+          title: `${user.name}: ${totalHours}h / ${availableHours}h (${totalPercent}%)`,
+          date,
+          backgroundColor: userColor,
+          borderColor: "transparent",
+          textColor: "white",
+          allDay: true,
+          extendedProps: {
+            userId: user.id,
+            userName: user.name,
+            totalHours,
+            availableHours,
+            totalPercent,
+            daySlots,
+            multiUser,
+            targetUsers,
+          },
+        };
+
+        console.log(`Created event for ${user.name} on ${date}:`, event);
+        events.push(event);
+      });
     });
 
     // If no events were created, add some test events to verify click functionality
@@ -160,7 +295,7 @@ export const LocalCalendarView: React.FC<LocalCalendarViewProps> = ({
           id: `test-${userId}-${date}`,
           title: `${userName}: Test Event ${index + 1}`,
           date,
-          backgroundColor: userColor,
+          // backgroundColor: userColor,
           borderColor: "transparent",
           textColor: "white",
           allDay: true,
@@ -185,7 +320,7 @@ export const LocalCalendarView: React.FC<LocalCalendarViewProps> = ({
       events
     );
     return events;
-  }, [userId, userName, workdayHours, timeSlots]);
+  }, [combinedUserData, targetUsers, multiUser]);
 
   // Calendar view configuration (unconstrained)
   const calendarViewConfig = useMemo(() => {
@@ -249,7 +384,7 @@ export const LocalCalendarView: React.FC<LocalCalendarViewProps> = ({
 
     const year = new Date(selectedDate).getFullYear();
     await saveWorkdayHoursMutation.mutateAsync({
-      userId,
+      userId: primaryUserId || "",
       year,
       date: selectedDate,
       entry,
@@ -321,13 +456,6 @@ export const LocalCalendarView: React.FC<LocalCalendarViewProps> = ({
 
   return (
     <Box sx={{ width: "100%", minHeight: "100vh", p: 2 }}>
-      {/* Header */}
-      <Box sx={{ mb: 3 }}>
-        <Typography variant="h4" sx={{ fontWeight: 600, mb: 1 }}>
-          Calendar for {userName}
-        </Typography>
-      </Box>
-
       {/* Calendar Section */}
       <Box sx={{ mb: 3 }}>
         <Box
@@ -375,12 +503,18 @@ export const LocalCalendarView: React.FC<LocalCalendarViewProps> = ({
               },
             },
             "& .fc-event": {
-              borderRadius: "6px",
-              border: "none",
+              borderRadius: "8px",
+              border: "1px solid rgba(255, 255, 255, 0.2)",
               fontSize: "0.75rem",
               fontWeight: 500,
-              margin: "2px",
-              padding: "2px 6px",
+              margin: "1px",
+              padding: "4px 8px",
+              boxShadow: "0 1px 3px rgba(0, 0, 0, 0.1)",
+              transition: "all 0.2s ease-in-out",
+            },
+            "& .fc-event:hover": {
+              transform: "translateY(-1px)",
+              boxShadow: "0 2px 6px rgba(0, 0, 0, 0.15)",
             },
             "& .fc-day-today": {
               backgroundColor: "#e3f2fd !important",
@@ -412,45 +546,77 @@ export const LocalCalendarView: React.FC<LocalCalendarViewProps> = ({
             dayMaxEvents={3}
             moreLinkClick="popover"
             eventContent={(eventInfo) => {
-              const { daySlots, totalHours, availableHours } =
+              const { totalHours, availableHours, userName } =
                 eventInfo.event.extendedProps;
 
+              // Get user initials for avatar
+              const getUserInitials = (name: string) => {
+                return name
+                  .split(" ")
+                  .map((n) => n[0])
+                  .join("")
+                  .toUpperCase();
+              };
+
+              const utilizationPercent = Math.round(
+                (totalHours / availableHours) * 100
+              );
+
               return (
-                <Box sx={{ p: 0.5, overflow: "hidden" }}>
-                  <Typography variant="caption" sx={{ fontWeight: "bold" }}>
-                    {totalHours}h / {availableHours}h
+                <Box
+                  sx={{
+                    p: 0.5,
+                    overflow: "hidden",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 0.5,
+                    height: "100%",
+                    minHeight: "32px",
+                  }}
+                >
+                  {/* User Avatar (leftmost) */}
+                  <Box
+                    sx={{
+                      width: 35,
+                      height: 35,
+                      borderRadius: "50%",
+                      backgroundColor: "rgba(255, 255, 255, 0.3)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: "0.65rem",
+                      fontWeight: "bold",
+                      color: "white",
+                      flexShrink: 0,
+                    }}
+                  >
+                    {getUserInitials(userName || "U")}
+                  </Box>
+
+                  {/* Hours (center) */}
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      fontWeight: "bold",
+                      fontSize: "0.75rem",
+                      flex: 1,
+                      textAlign: "center",
+                    }}
+                  >
+                    {totalHours}h/{availableHours}h
                   </Typography>
-                  {daySlots && daySlots.length > 0 && (
-                    <Box sx={{ mt: 0.5 }}>
-                      {daySlots.slice(0, 2).map((slot: any) => {
-                        const grant = grants.find(
-                          (g: any) => g.PK === slot.GrantID
-                        );
-                        return (
-                          <Typography
-                            key={slot.GrantID}
-                            variant="caption"
-                            sx={{
-                              display: "block",
-                              fontSize: "0.65rem",
-                              opacity: 0.9,
-                            }}
-                          >
-                            {grant?.Title || "Unknown Grant"}:{" "}
-                            {slot.HoursAllocated}h
-                          </Typography>
-                        );
-                      })}
-                      {daySlots.length > 2 && (
-                        <Typography
-                          variant="caption"
-                          sx={{ fontSize: "0.65rem", opacity: 0.8 }}
-                        >
-                          +{daySlots.length - 2} more...
-                        </Typography>
-                      )}
-                    </Box>
-                  )}
+
+                  {/* Utilization percentage (rightmost) */}
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      fontSize: "0.7rem",
+                      fontWeight: "500",
+                      flexShrink: 0,
+                    }}
+                  >
+                    {utilizationPercent}%
+                  </Typography>
                 </Box>
               );
             }}
@@ -462,8 +628,8 @@ export const LocalCalendarView: React.FC<LocalCalendarViewProps> = ({
       <EnhancedTimesheetModal
         open={timesheetModalOpen}
         onClose={() => setTimesheetModalOpen(false)}
-        userId={userId}
-        userName={userName}
+        userId={primaryUserId || ""}
+        userName={primaryUserName}
       />
 
       {/* Day Type Modal */}
@@ -472,8 +638,10 @@ export const LocalCalendarView: React.FC<LocalCalendarViewProps> = ({
         onClose={() => setDayTypeModalOpen(false)}
         onSave={handleDayTypeSave}
         date={selectedDate}
-        currentEntry={selectedDate ? workdayHours[selectedDate] : undefined}
-        userName={userName}
+        currentEntry={
+          selectedDate ? primaryUserData.workdayHours[selectedDate] : undefined
+        }
+        userName={primaryUserName}
       />
 
       {/* Info Alert */}

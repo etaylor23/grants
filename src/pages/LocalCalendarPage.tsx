@@ -8,10 +8,18 @@ import { Individual } from "../db/schema";
 export const LocalCalendarPage: React.FC = () => {
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [selectedUser, setSelectedUser] = useState<Individual | null>(null);
+  const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
+  const [selectedUsers, setSelectedUsers] = useState<Individual[]>([]);
+  const [multiSelect] = useState(true);
 
   const handleUserChange = (userId: string, user: Individual) => {
     setSelectedUserId(userId);
     setSelectedUser(user);
+  };
+
+  const handleUsersChange = (userIds: string[], users: Individual[]) => {
+    setSelectedUserIds(userIds);
+    setSelectedUsers(users);
   };
 
   const handleDateSelect = (date: string) => {
@@ -19,15 +27,18 @@ export const LocalCalendarPage: React.FC = () => {
   };
 
   return (
-    <AppLayout selectedUserId={selectedUserId} onUserChange={handleUserChange}>
+    <AppLayout
+      selectedUserId={selectedUserId}
+      selectedUserIds={selectedUserIds}
+      onUserChange={handleUserChange}
+      onUsersChange={handleUsersChange}
+      multiSelect={multiSelect}
+    >
       <Box sx={{ p: 3 }}>
         {/* Header */}
         <Box sx={{ mb: 3 }}>
           <Typography variant="h4" sx={{ fontWeight: 600, mb: 1 }}>
             Global Calendar
-          </Typography>
-          <Typography variant="body1" color="text.secondary">
-            View time allocations and workdays across all organizations
           </Typography>
         </Box>
 
@@ -38,8 +49,12 @@ export const LocalCalendarPage: React.FC = () => {
         <SmartCalendar
           selectedUserId={selectedUserId}
           selectedUser={selectedUser}
+          selectedUserIds={selectedUserIds}
+          selectedUsers={selectedUsers}
           onUserChange={handleUserChange}
+          onUsersChange={handleUsersChange}
           onDateSelect={handleDateSelect}
+          multiSelect={multiSelect}
         />
       </Box>
     </AppLayout>

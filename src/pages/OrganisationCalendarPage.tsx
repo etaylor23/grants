@@ -79,9 +79,6 @@ export const OrganisationCalendarPage: React.FC = () => {
             <Typography variant="h4" sx={{ fontWeight: 600, mb: 1 }}>
               Calendar - {organisation.Name}
             </Typography>
-            <Typography variant="body1" color="text.secondary">
-              View time allocations and workdays for organisation members
-            </Typography>
           </Box>
           <BackToGlobalButton globalRoute="/calendar" />
         </Box>

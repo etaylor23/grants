@@ -8,10 +8,10 @@ import { render, screen } from "@testing-library/react";
 
 // Mock components that represent the new design
 const MockContextSwitcher = ({ compact }: { compact?: boolean }) => (
-  <div 
-    data-testid="context-switcher" 
+  <div
+    data-testid="context-switcher"
     data-compact={compact}
-    className={`context-indicator ${compact ? 'compact' : ''}`}
+    className={`context-indicator ${compact ? "compact" : ""}`}
   >
     <div className="context-badge global">Global</div>
     {!compact && (
@@ -23,18 +23,18 @@ const MockContextSwitcher = ({ compact }: { compact?: boolean }) => (
   </div>
 );
 
-const MockUserPicker = ({ 
-  compact, 
-  showContextIndicator 
-}: { 
-  compact?: boolean; 
+const MockUserPicker = ({
+  compact,
+  showContextIndicator,
+}: {
+  compact?: boolean;
   showContextIndicator?: boolean;
 }) => (
-  <div 
+  <div
     data-testid="user-picker"
     data-compact={compact}
     data-show-context={showContextIndicator}
-    className={`user-picker ${compact ? 'compact' : ''}`}
+    className={`user-picker ${compact ? "compact" : ""}`}
   >
     <div className="user-avatar">JD</div>
     {!compact && (
@@ -46,11 +46,11 @@ const MockUserPicker = ({
   </div>
 );
 
-const MockNavigationBar = ({ 
-  showUserPicker = true, 
+const MockNavigationBar = ({
+  showUserPicker = true,
   isMobile = false,
-  isTablet = false 
-}: { 
+  isTablet = false,
+}: {
   showUserPicker?: boolean;
   isMobile?: boolean;
   isTablet?: boolean;
@@ -59,10 +59,10 @@ const MockNavigationBar = ({
     {/* Header Section */}
     <div className="header-section">
       <div className="brand-section">
-        <h1>GrantGrid</h1>
+        <h1>Grantura</h1>
         {!isMobile && <p>Your workforce, mapped to funding</p>}
       </div>
-      
+
       {/* Breadcrumbs - Hidden on tablet and mobile */}
       {!isTablet && (
         <div data-testid="breadcrumbs" className="breadcrumbs-section">
@@ -76,7 +76,7 @@ const MockNavigationBar = ({
       {/* Primary Controls */}
       <div className="primary-controls">
         <MockContextSwitcher compact={isMobile} />
-        
+
         {/* User Picker - Hidden on mobile */}
         {showUserPicker && !isMobile && (
           <MockUserPicker compact={isTablet} showContextIndicator={false} />
@@ -102,10 +102,10 @@ describe("Navigation Design Integration Tests", () => {
 
       // Context switcher should be in navigation section
       expect(screen.getByTestId("context-switcher")).toBeInTheDocument();
-      
+
       // User picker should be in navigation section
       expect(screen.getByTestId("user-picker")).toBeInTheDocument();
-      
+
       // Create Grant button should be in separate action section
       expect(screen.getByTestId("create-grant-button")).toBeInTheDocument();
     });
@@ -119,10 +119,10 @@ describe("Navigation Design Integration Tests", () => {
 
       // Context switcher should be visually distinct (primary context)
       expect(contextSwitcher).toHaveAttribute("data-compact", "false");
-      
+
       // User picker should be secondary
       expect(userPicker).toHaveAttribute("data-show-context", "false");
-      
+
       // Action button should be separated
       expect(createButton).toBeInTheDocument();
     });
@@ -143,15 +143,19 @@ describe("Navigation Design Integration Tests", () => {
       // Context switcher should be compact
       const contextSwitcher = screen.getByTestId("context-switcher");
       expect(contextSwitcher).toHaveAttribute("data-compact", "true");
-      
+
       // User picker should be hidden on mobile
       expect(screen.queryByTestId("user-picker")).not.toBeInTheDocument();
-      
+
       // Action buttons should be hidden on mobile
-      expect(screen.queryByTestId("create-grant-button")).not.toBeInTheDocument();
-      
+      expect(
+        screen.queryByTestId("create-grant-button")
+      ).not.toBeInTheDocument();
+
       // App subtitle should be hidden
-      expect(screen.queryByText("Your workforce, mapped to funding")).not.toBeInTheDocument();
+      expect(
+        screen.queryByText("Your workforce, mapped to funding")
+      ).not.toBeInTheDocument();
     });
 
     it("adapts to tablet viewport", () => {
@@ -160,10 +164,10 @@ describe("Navigation Design Integration Tests", () => {
       // User picker should be compact
       const userPicker = screen.getByTestId("user-picker");
       expect(userPicker).toHaveAttribute("data-compact", "true");
-      
+
       // Breadcrumbs should be hidden
       expect(screen.queryByTestId("breadcrumbs")).not.toBeInTheDocument();
-      
+
       // Create button should show shortened text
       expect(screen.getByText("Create")).toBeInTheDocument();
       expect(screen.queryByText("Create Grant")).not.toBeInTheDocument();
@@ -177,10 +181,12 @@ describe("Navigation Design Integration Tests", () => {
       expect(screen.getByTestId("user-picker")).toBeInTheDocument();
       expect(screen.getByTestId("create-grant-button")).toBeInTheDocument();
       expect(screen.getByTestId("breadcrumbs")).toBeInTheDocument();
-      
+
       // Full text should be shown
       expect(screen.getByText("Create Grant")).toBeInTheDocument();
-      expect(screen.getByText("Your workforce, mapped to funding")).toBeInTheDocument();
+      expect(
+        screen.getByText("Your workforce, mapped to funding")
+      ).toBeInTheDocument();
     });
   });
 
@@ -189,7 +195,7 @@ describe("Navigation Design Integration Tests", () => {
       render(<MockNavigationBar />);
 
       const contextSwitcher = screen.getByTestId("context-switcher");
-      
+
       // Should show global context badge
       expect(screen.getByText("Global")).toBeInTheDocument();
       expect(screen.getByText("Global Context")).toBeInTheDocument();
@@ -204,7 +210,7 @@ describe("Navigation Design Integration Tests", () => {
 
       // Context switcher should not show user context indicator
       expect(userPicker).toHaveAttribute("data-show-context", "false");
-      
+
       // They should be visually distinct components
       expect(contextSwitcher).not.toBe(userPicker);
     });
@@ -216,11 +222,11 @@ describe("Navigation Design Integration Tests", () => {
 
       const createButton = screen.getByTestId("create-grant-button");
       expect(createButton).toBeInTheDocument();
-      
+
       // Button should not interfere with navigation
       const contextSwitcher = screen.getByTestId("context-switcher");
       const userPicker = screen.getByTestId("user-picker");
-      
+
       expect(contextSwitcher).toBeInTheDocument();
       expect(userPicker).toBeInTheDocument();
     });
@@ -228,7 +234,9 @@ describe("Navigation Design Integration Tests", () => {
     it("hides action buttons when user selection is disabled", () => {
       render(<MockNavigationBar showUserPicker={false} />);
 
-      expect(screen.queryByTestId("create-grant-button")).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId("create-grant-button")
+      ).not.toBeInTheDocument();
       expect(screen.queryByTestId("user-picker")).not.toBeInTheDocument();
     });
   });
@@ -239,7 +247,7 @@ describe("Navigation Design Integration Tests", () => {
 
       const contextSwitcher = screen.getByTestId("context-switcher");
       const userPicker = screen.getByTestId("user-picker");
-      
+
       expect(contextSwitcher).toHaveClass("context-indicator");
       expect(userPicker).toHaveClass("user-picker");
     });
@@ -257,7 +265,7 @@ describe("Navigation Design Integration Tests", () => {
       const contextSwitcher = screen.getByTestId("context-switcher");
       const userPicker = screen.getByTestId("user-picker");
       const createButton = screen.getByTestId("create-grant-button");
-      
+
       // All interactive elements should have test IDs for accessibility
       expect(contextSwitcher).toHaveAttribute("data-testid");
       expect(userPicker).toHaveAttribute("data-testid");

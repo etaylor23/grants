@@ -21,7 +21,11 @@ import {
 import { useNavigate } from "react-router-dom";
 import { AppLayout } from "../components/Layout/AppLayout";
 import { ContextIndicator } from "../components/ContextIndicator";
-import { useOrganisations, useGrants, useIndividuals } from "../hooks/useLocalData";
+import {
+  useOrganisations,
+  useGrants,
+  useIndividuals,
+} from "../hooks/useLocalData";
 
 export const DashboardPage: React.FC = () => {
   const navigate = useNavigate();
@@ -30,14 +34,17 @@ export const DashboardPage: React.FC = () => {
   const { data: individuals = [] } = useIndividuals();
 
   // Calculate global metrics
-  const activeGrants = grants.filter(grant => {
+  const activeGrants = grants.filter((grant) => {
     const now = new Date();
     const startDate = new Date(grant.StartDate);
     const endDate = new Date(grant.EndDate);
     return startDate <= now && now <= endDate;
   });
 
-  const totalClaimableAmount = grants.reduce((sum, grant) => sum + (grant.TotalClaimableAmount || 0), 0);
+  const totalClaimableAmount = grants.reduce(
+    (sum, grant) => sum + (grant.TotalClaimableAmount || 0),
+    0
+  );
 
   const globalActions = [
     {
@@ -72,10 +79,11 @@ export const DashboardPage: React.FC = () => {
         {/* Header */}
         <Box sx={{ mb: 4 }}>
           <Typography variant="h3" sx={{ fontWeight: 600, mb: 1 }}>
-            GrantGrid Dashboard
+            Grantura Dashboard
           </Typography>
           <Typography variant="h6" color="text.secondary">
-            Manage grants, organizations, and time tracking across your portfolio
+            Manage grants, organizations, and time tracking across your
+            portfolio
           </Typography>
         </Box>
 
@@ -90,7 +98,10 @@ export const DashboardPage: React.FC = () => {
           <Grid container spacing={3}>
             <Grid item xs={12} sm={6} md={3}>
               <Box sx={{ textAlign: "center" }}>
-                <Typography variant="h4" sx={{ fontWeight: 600, color: "#1976d2" }}>
+                <Typography
+                  variant="h4"
+                  sx={{ fontWeight: 600, color: "#1976d2" }}
+                >
                   {organisations.length}
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
@@ -100,7 +111,10 @@ export const DashboardPage: React.FC = () => {
             </Grid>
             <Grid item xs={12} sm={6} md={3}>
               <Box sx={{ textAlign: "center" }}>
-                <Typography variant="h4" sx={{ fontWeight: 600, color: "#2e7d32" }}>
+                <Typography
+                  variant="h4"
+                  sx={{ fontWeight: 600, color: "#2e7d32" }}
+                >
                   {grants.length}
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
@@ -110,7 +124,10 @@ export const DashboardPage: React.FC = () => {
             </Grid>
             <Grid item xs={12} sm={6} md={3}>
               <Box sx={{ textAlign: "center" }}>
-                <Typography variant="h4" sx={{ fontWeight: 600, color: "#ed6c02" }}>
+                <Typography
+                  variant="h4"
+                  sx={{ fontWeight: 600, color: "#ed6c02" }}
+                >
                   {activeGrants.length}
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
@@ -120,7 +137,10 @@ export const DashboardPage: React.FC = () => {
             </Grid>
             <Grid item xs={12} sm={6} md={3}>
               <Box sx={{ textAlign: "center" }}>
-                <Typography variant="h4" sx={{ fontWeight: 600, color: "#9c27b0" }}>
+                <Typography
+                  variant="h4"
+                  sx={{ fontWeight: 600, color: "#9c27b0" }}
+                >
                   {individuals.length}
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
@@ -160,7 +180,11 @@ export const DashboardPage: React.FC = () => {
                       <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
                         {action.title}
                       </Typography>
-                      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                      <Typography
+                        variant="body2"
+                        color="text.secondary"
+                        sx={{ mb: 2 }}
+                      >
                         {action.description}
                       </Typography>
                       <Chip
@@ -187,7 +211,9 @@ export const DashboardPage: React.FC = () => {
           </Typography>
           {organisations.length === 0 ? (
             <Paper sx={{ p: 4, textAlign: "center" }}>
-              <OrganizationIcon sx={{ fontSize: 48, color: "text.secondary", mb: 2 }} />
+              <OrganizationIcon
+                sx={{ fontSize: 48, color: "text.secondary", mb: 2 }}
+              />
               <Typography variant="h6" color="text.secondary" sx={{ mb: 1 }}>
                 No organizations found
               </Typography>
@@ -198,8 +224,10 @@ export const DashboardPage: React.FC = () => {
           ) : (
             <Grid container spacing={3}>
               {organisations.map((org) => {
-                const orgGrants = grants.filter(grant => grant.OrganisationID === org.PK);
-                const orgActiveGrants = orgGrants.filter(grant => {
+                const orgGrants = grants.filter(
+                  (grant) => grant.OrganisationID === org.PK
+                );
+                const orgActiveGrants = orgGrants.filter((grant) => {
                   const now = new Date();
                   const startDate = new Date(grant.StartDate);
                   const endDate = new Date(grant.EndDate);
@@ -220,16 +248,27 @@ export const DashboardPage: React.FC = () => {
                     >
                       <CardActionArea
                         sx={{ height: "100%", p: 3 }}
-                        onClick={() => navigate(`/organisation/${org.CompanyNumber}`)}
+                        onClick={() =>
+                          navigate(`/organisation/${org.CompanyNumber}`)
+                        }
                       >
                         <CardContent sx={{ p: 0 }}>
-                          <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
+                          <Typography
+                            variant="h6"
+                            sx={{ fontWeight: 600, mb: 1 }}
+                          >
                             {org.Name}
                           </Typography>
-                          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                          <Typography
+                            variant="body2"
+                            color="text.secondary"
+                            sx={{ mb: 2 }}
+                          >
                             Company Number: {org.CompanyNumber}
                           </Typography>
-                          <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
+                          <Box
+                            sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}
+                          >
                             <Chip
                               label={`${orgGrants.length} grants`}
                               size="small"
@@ -238,7 +277,11 @@ export const DashboardPage: React.FC = () => {
                             <Chip
                               label={`${orgActiveGrants.length} active`}
                               size="small"
-                              color={orgActiveGrants.length > 0 ? "success" : "default"}
+                              color={
+                                orgActiveGrants.length > 0
+                                  ? "success"
+                                  : "default"
+                              }
                             />
                           </Box>
                         </CardContent>

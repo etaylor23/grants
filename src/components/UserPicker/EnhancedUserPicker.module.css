@@ -147,15 +147,7 @@
   font-size: 0.875rem;
 }
 
-/* Menu Styles */
-.userMenu {
-  min-width: 280px;
-  max-height: 400px;
-  overflow: auto;
-  border-radius: 12px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
-  border: 1px solid rgba(0, 0, 0, 0.08);
-}
+/* Menu Styles - Base definition moved to enhanced section below */
 
 .menuHeader {
   padding: 1rem;
@@ -294,18 +286,140 @@
   margin: 0.5rem;
 }
 
+/* Multi-Select Styles */
+.multiUserAvatars {
+  display: flex;
+  align-items: center;
+  position: relative;
+}
+
+.userAvatar.stacked {
+  margin-left: -8px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  position: relative;
+}
+
+.userAvatar.stacked:first-child {
+  margin-left: 0;
+}
+
+.userAvatar.overflow {
+  background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+/* Search Section */
+.searchSection {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.searchField {
+  background: #f9fafb;
+}
+
+.searchField .MuiOutlinedInput-root {
+  border-radius: 8px;
+  background: #f9fafb;
+}
+
+.searchField .MuiOutlinedInput-root:hover {
+  background: #f3f4f6;
+}
+
+.searchField .MuiOutlinedInput-root.Mui-focused {
+  background: #ffffff;
+}
+
+.searchIcon {
+  color: #6b7280;
+  font-size: 1.125rem;
+}
+
+/* Multi-Select Controls */
+.multiSelectControls {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border-bottom: 1px solid #e5e7eb;
+  background: #f9fafb;
+}
+
+.controlButton {
+  font-size: 0.75rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: 6px;
+  text-transform: none;
+  color: #374151;
+  border: 1px solid #d1d5db;
+  background: #ffffff;
+  min-height: auto;
+}
+
+.controlButton:hover {
+  background: #f3f4f6;
+  border-color: #9ca3af;
+}
+
+.controlButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Menu Item Checkbox */
+.menuItemCheckbox {
+  margin-right: 0.5rem;
+  padding: 0.25rem;
+}
+
+.menuItemCheckbox .MuiSvgIcon-root {
+  font-size: 1.125rem;
+}
+
+/* No Results */
+.noResults {
+  padding: 2rem 1rem;
+  text-align: center;
+}
+
+.noResultsText {
+  color: #6b7280;
+  font-size: 0.875rem;
+  font-style: italic;
+}
+
+/* Enhanced Menu */
+.userMenu {
+  min-width: 320px;
+  max-height: 500px;
+  overflow: auto;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
   .userPicker {
     min-width: 160px;
   }
-  
+
   .userName {
     max-width: 80px;
   }
-  
+
   .userMenu {
-    min-width: 260px;
+    min-width: 280px;
+  }
+
+  .multiSelectControls {
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .controlButton {
+    width: 100%;
   }
 }
 
@@ -313,13 +427,25 @@
   .userInfo {
     display: none;
   }
-  
+
   .userPicker {
     min-width: 48px;
     padding: 0.375rem 0.5rem;
   }
-  
+
   .contextIndicator {
     display: none;
+  }
+
+  .userMenu {
+    min-width: 260px;
+  }
+
+  .searchSection {
+    padding: 0.5rem;
+  }
+
+  .multiSelectControls {
+    padding: 0.5rem;
   }
 }

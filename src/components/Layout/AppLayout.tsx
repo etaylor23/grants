@@ -23,16 +23,22 @@ import classes from "./EnhancedAppLayout.module.css";
 
 interface AppLayoutProps {
   children: React.ReactNode;
-  selectedUserId?: string | null;
-  onUserChange?: (userId: string, user: Individual) => void;
+  selectedUserId?: string | null; // Legacy support for single-select
+  selectedUserIds?: string[]; // Multi-select support
+  onUserChange?: (userId: string, user: Individual) => void; // Legacy support
+  onUsersChange?: (userIds: string[], users: Individual[]) => void; // Multi-select support
   organisationId?: string;
+  multiSelect?: boolean;
 }
 
 export const AppLayout: React.FC<AppLayoutProps> = ({
   children,
   selectedUserId,
+  selectedUserIds,
   onUserChange,
+  onUsersChange,
   organisationId,
+  multiSelect = true,
 }) => {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [createGrantModalOpen, setCreateGrantModalOpen] = useState(false);
@@ -66,7 +72,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
           <Box className={classes.headerSection}>
             {/* Brand Section */}
             <Box className={classes.brandSection}>
-              <Typography className={classes.appTitle}>GrantGrid</Typography>
+              <Typography className={classes.appTitle}>Grantura</Typography>
               {!isMobile && (
                 <Typography className={classes.appSubtitle}>
                   Your workforce, mapped to funding
@@ -93,13 +99,16 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
               <ContextSwitcher compact={isMobile} />
 
               {/* Secondary User Control - Show based on context and screen size */}
-              {onUserChange && !isMobile && (
+              {(onUserChange || onUsersChange) && !isMobile && (
                 <UserPicker
                   selectedUserId={selectedUserId || null}
+                  selectedUserIds={selectedUserIds}
                   onUserChange={onUserChange}
+                  onUsersChange={onUsersChange}
                   organisationId={organisationId}
                   compact={isTablet}
                   showContextIndicator={false} // Context already shown in ContextSwitcher
+                  multiSelect={multiSelect}
                 />
               )}
             </Box>
@@ -144,7 +153,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
         <DynamicSidebar organizationId={organisationId} />
 
         {/* Mobile Action Buttons - Show in drawer on mobile */}
-        {isMobile && onUserChange && (
+        {isMobile && (onUserChange || onUsersChange) && (
           <Box sx={{ p: 2, borderTop: "1px solid rgba(0, 0, 0, 0.08)" }}>
             <Button
               variant="contained"
@@ -161,10 +170,13 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
             {/* Mobile User Picker */}
             <UserPicker
               selectedUserId={selectedUserId || null}
+              selectedUserIds={selectedUserIds}
               onUserChange={onUserChange}
+              onUsersChange={onUsersChange}
               organisationId={organisationId}
               compact={true}
               showContextIndicator={true}
+              multiSelect={multiSelect}
             />
           </Box>
         )}
