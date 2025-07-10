@@ -16,7 +16,7 @@ import {
   addMonths,
   subMonths,
 } from "date-fns";
-import { generateUserColor } from "../../utils/colors";
+import { generateConsistentColor } from "../../utils/colors";
 import { getHoursFromDayEntry } from "../../db/schema";
 import { EnhancedTimesheetModal } from "../EnhancedTimesheetModal";
 
@@ -46,6 +46,11 @@ export const UnconstrainedCalendarView: React.FC<
   const [timesheetModalOpen, setTimesheetModalOpen] = useState(false);
   // const [calendarApi, setCalendarApi] = useState<any>(null); // Unused for now
   const [currentDate, setCurrentDate] = useState(new Date());
+
+  // State for tracking which user's timesheet modal should be opened
+  const [selectedModalUserId, setSelectedModalUserId] = useState<string>("");
+  const [selectedModalUserName, setSelectedModalUserName] =
+    useState<string>("");
 
   // Calculate current view period based on calendar's current view
   const currentMonth = startOfMonth(currentDate);
@@ -233,7 +238,7 @@ export const UnconstrainedCalendarView: React.FC<
 
     // Create events for each user
     combinedUserData.forEach(({ user, workdayHours, timeSlots }) => {
-      const userColor = generateUserColor(user.name);
+      const userColor = generateConsistentColor(user.name);
 
       // Filter timeSlots for this user by organization grants
       const userFilteredTimeSlots = organizationGrantIds
@@ -317,6 +322,10 @@ export const UnconstrainedCalendarView: React.FC<
       // Check if this date already has workday hours
       // const existingHours = workdayHours[dateStr]; // Unused in new flow
 
+      // Reset selected user when clicking on a date (use primary user)
+      setSelectedModalUserId("");
+      setSelectedModalUserName("");
+
       // REVERSE DATA FLOW: No longer auto-create workday entries on calendar click
       // Workday entries are now auto-generated when timesheet hours are allocated
       // Simply open the timesheet modal for any date
@@ -329,10 +338,22 @@ export const UnconstrainedCalendarView: React.FC<
   };
 
   const handleEventClick = (info: any) => {
+    console.log("🎯 Event clicked:", info.event, info);
+
+    // Open enhanced timesheet modal when clicking on a workday event
+    const eventUserId = info.event.extendedProps?.userId;
+    const eventUserName = info.event.extendedProps?.userName;
     const { daySlots } = info.event.extendedProps;
-    if (daySlots) {
-      // Open timesheet modal for the clicked date
-      // const clickedDate = new Date(info.event.start); // Unused for now
+
+    console.log("Event details:", { eventUserId, eventUserName });
+
+    if (daySlots && eventUserId && eventUserName) {
+      // Set the selected user for the modal
+      setSelectedModalUserId(eventUserId);
+      setSelectedModalUserName(eventUserName);
+      setTimesheetModalOpen(true);
+    } else if (daySlots) {
+      // Fallback for events without user details
       setTimesheetModalOpen(true);
     }
   };
@@ -400,9 +421,19 @@ export const UnconstrainedCalendarView: React.FC<
             "& .fc-event": {
               fontSize: "0.75rem",
               fontWeight: 500,
-              border: "none",
-              borderRadius: "4px",
+              border: "1px solid rgba(255, 255, 255, 0.2)",
+              borderRadius: "8px",
               margin: "1px",
+              padding: "4px 8px",
+              boxShadow: "0 1px 3px rgba(0, 0, 0, 0.1)",
+              transition: "all 0.2s ease-in-out",
+              cursor: "pointer",
+            },
+            "& .fc-event:hover": {
+              transform: "translateY(-2px) scale(1.02)",
+              boxShadow: "0 4px 12px rgba(0, 0, 0, 0.2)",
+              borderColor: "rgba(255, 255, 255, 0.4)",
+              zIndex: 10,
             },
           }}
         >
@@ -435,11 +466,11 @@ export const UnconstrainedCalendarView: React.FC<
             moreLinkClick="popover"
             eventContent={(eventInfo) => {
               const {
-                totalHours,
-                availableHours,
-                userName,
-                utilizationPercent,
-              } = eventInfo.event.extendedProps;
+                totalHours = 0,
+                availableHours = 8,
+                userName = "Unknown User",
+                utilizationPercent = 0,
+              } = eventInfo.event.extendedProps || {};
 
               // Get user initials for avatar
               const getUserInitials = (name: string) => {
@@ -511,9 +542,14 @@ export const UnconstrainedCalendarView: React.FC<
       {/* Enhanced Timesheet Modal with Period Selector */}
       <EnhancedTimesheetModal
         open={timesheetModalOpen}
-        onClose={() => setTimesheetModalOpen(false)}
-        userId={primaryUserId}
-        userName={primaryUserName}
+        onClose={() => {
+          setTimesheetModalOpen(false);
+          // Reset selected user when modal closes
+          setSelectedModalUserId("");
+          setSelectedModalUserName("");
+        }}
+        userId={selectedModalUserId || primaryUserId}
+        userName={selectedModalUserName || primaryUserName}
         organisationId={organisationId}
       />
     </Box>

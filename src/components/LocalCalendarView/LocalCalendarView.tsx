@@ -16,7 +16,7 @@ import {
   addMonths,
   subMonths,
 } from "date-fns";
-import { generatePastelColor } from "../../utils/colors";
+import { generateConsistentColor } from "../../utils/colors";
 import { getHoursFromDayEntry } from "../../db/schema";
 import { EnhancedTimesheetModal } from "../EnhancedTimesheetModal";
 import { DayTypeModal } from "../DayTypeModal";
@@ -47,6 +47,11 @@ export const LocalCalendarView: React.FC<LocalCalendarViewProps> = ({
   const [selectedDate, setSelectedDate] = useState<string>("");
   const [calendarApi, setCalendarApi] = useState<any>(null);
   const [currentDate, setCurrentDate] = useState(new Date());
+
+  // State for tracking which user's timesheet modal should be opened
+  const [selectedModalUserId, setSelectedModalUserId] = useState<string>("");
+  const [selectedModalUserName, setSelectedModalUserName] =
+    useState<string>("");
 
   // Calculate current view period based on calendar's current view (unconstrained)
   const currentMonth = startOfMonth(currentDate);
@@ -217,7 +222,7 @@ export const LocalCalendarView: React.FC<LocalCalendarViewProps> = ({
     // Create events for each user separately
     combinedUserData.forEach((userData) => {
       const { user, workdayHours, timeSlots } = userData;
-      const userColor = generatePastelColor(user.name);
+      const userColor = generateConsistentColor(user.name);
 
       // Group time slots by date for this user
       const slotsByDate = timeSlots.reduce(
@@ -304,7 +309,7 @@ export const LocalCalendarView: React.FC<LocalCalendarViewProps> = ({
             userName,
             totalHours: 8,
             availableHours: 8,
-            totalPercent: 100,
+            utilizationPercent: 100,
             daySlots: [],
             isTestEvent: true,
           },
@@ -373,6 +378,10 @@ export const LocalCalendarView: React.FC<LocalCalendarViewProps> = ({
     // Store selected date for modals
     setSelectedDate(dateStr);
 
+    // Reset selected user when clicking on a date (use primary user)
+    setSelectedModalUserId("");
+    setSelectedModalUserName("");
+
     // For now, open timesheet modal directly
     // TODO: Could add context menu or modifier key detection for day type editing
     setTimesheetModalOpen(true);
@@ -401,6 +410,9 @@ export const LocalCalendarView: React.FC<LocalCalendarViewProps> = ({
     console.log("Event details:", { eventUserId, eventUserName });
 
     if (eventUserId && eventUserName) {
+      // Set the selected user for the modal
+      setSelectedModalUserId(eventUserId);
+      setSelectedModalUserName(eventUserName);
       setTimesheetModalOpen(true);
     } else {
       console.warn("Event missing user details:", info.event.extendedProps);
@@ -511,10 +523,13 @@ export const LocalCalendarView: React.FC<LocalCalendarViewProps> = ({
               padding: "4px 8px",
               boxShadow: "0 1px 3px rgba(0, 0, 0, 0.1)",
               transition: "all 0.2s ease-in-out",
+              cursor: "pointer",
             },
             "& .fc-event:hover": {
-              transform: "translateY(-1px)",
-              boxShadow: "0 2px 6px rgba(0, 0, 0, 0.15)",
+              transform: "translateY(-2px) scale(1.02)",
+              boxShadow: "0 4px 12px rgba(0, 0, 0, 0.2)",
+              borderColor: "rgba(255, 255, 255, 0.4)",
+              zIndex: 10,
             },
             "& .fc-day-today": {
               backgroundColor: "#e3f2fd !important",
@@ -547,11 +562,11 @@ export const LocalCalendarView: React.FC<LocalCalendarViewProps> = ({
             moreLinkClick="popover"
             eventContent={(eventInfo) => {
               const {
-                totalHours,
-                availableHours,
-                userName,
-                utilizationPercent,
-              } = eventInfo.event.extendedProps;
+                totalHours = 0,
+                availableHours = 8,
+                userName = "Unknown User",
+                utilizationPercent = 0,
+              } = eventInfo.event.extendedProps || {};
 
               // Get user initials for avatar
               const getUserInitials = (name: string) => {
@@ -623,9 +638,14 @@ export const LocalCalendarView: React.FC<LocalCalendarViewProps> = ({
       {/* Enhanced Timesheet Modal */}
       <EnhancedTimesheetModal
         open={timesheetModalOpen}
-        onClose={() => setTimesheetModalOpen(false)}
-        userId={primaryUserId || ""}
-        userName={primaryUserName}
+        onClose={() => {
+          setTimesheetModalOpen(false);
+          // Reset selected user when modal closes
+          setSelectedModalUserId("");
+          setSelectedModalUserName("");
+        }}
+        userId={selectedModalUserId || primaryUserId || ""}
+        userName={selectedModalUserName || primaryUserName}
       />
 
       {/* Day Type Modal */}
