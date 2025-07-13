@@ -10,6 +10,7 @@ import {
 } from "react-router-dom";
 import { theme } from "./theme";
 // Legacy pages removed - using IndexedDB only
+import { DashboardPage } from "./pages/DashboardPage";
 import { LocalCalendarPage } from "./pages/LocalCalendarPage";
 import { LocalTimesheetPage } from "./pages/LocalTimesheetPage";
 import { GrantsListPage } from "./pages/GrantsListPage";
@@ -19,6 +20,7 @@ import { OrganisationGrantsPage } from "./pages/OrganisationGrantsPage";
 import { OrganisationIndividualsPage } from "./pages/OrganisationIndividualsPage";
 import { OrganisationCalendarPage } from "./pages/OrganisationCalendarPage";
 import { OrganisationTimesheetsPage } from "./pages/OrganisationTimesheetsPage";
+import { GrantViewPage } from "./pages/GrantViewPage";
 import { initializeDatabase } from "./db/index";
 import { isDexieBackend } from "./config/environment";
 
@@ -41,8 +43,8 @@ function App() {
         await initializeDatabase();
         setIsInitialized(true);
       } catch (error) {
-        console.error('Database initialization failed:', error);
-        setInitError(error instanceof Error ? error.message : 'Unknown error');
+        console.error("Database initialization failed:", error);
+        setInitError(error instanceof Error ? error.message : "Unknown error");
         setIsInitialized(true); // Continue anyway
       }
     };
@@ -56,11 +58,11 @@ function App() {
         <CssBaseline />
         <Box
           sx={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            height: '100vh',
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            height: "100vh",
             gap: 2,
           }}
         >
@@ -82,35 +84,71 @@ function App() {
         <CssBaseline />
         <Router>
           <Routes>
-            {/* Default route */}
-            <Route path="/" element={<Navigate to="/calendar" replace />} />
+            {/* Default route - Dashboard */}
+            <Route path="/" element={<DashboardPage />} />
 
-            {/* IndexedDB routes */}
+            {/* Global routes */}
             <Route path="/calendar" element={<LocalCalendarPage />} />
-            <Route path="/timesheet/:userSlug" element={<LocalTimesheetPage />} />
+            <Route
+              path="/calendar/:orgNumber"
+              element={<OrganisationCalendarPage />}
+            />
+            <Route
+              path="/timesheet/:userSlug"
+              element={<LocalTimesheetPage />}
+            />
             <Route path="/grants" element={<GrantsListPage />} />
+            <Route
+              path="/grants/:orgNumber"
+              element={<OrganisationGrantsPage />}
+            />
             <Route path="/organisations" element={<OrganisationsListPage />} />
 
-            {/* Organisation-specific routes */}
-            <Route path="/organisation/:orgNumber" element={<OrganisationDashboard />} />
-            <Route path="/organisation/:orgNumber/grants" element={<OrganisationGrantsPage />} />
-            <Route path="/organisation/:orgNumber/individuals" element={<OrganisationIndividualsPage />} />
-            <Route path="/organisation/:orgNumber/calendar" element={<OrganisationCalendarPage />} />
-            <Route path="/organisation/:orgNumber/timesheets" element={<OrganisationTimesheetsPage />} />
+            {/* Organization-specific routes (legacy support) */}
+            <Route
+              path="/organisation/:orgNumber"
+              element={<OrganisationDashboard />}
+            />
+            <Route
+              path="/organisation/:orgNumber/grants"
+              element={<OrganisationGrantsPage />}
+            />
+            <Route
+              path="/organisation/:orgNumber/grants/:grantId"
+              element={<GrantViewPage />}
+            />
+            <Route
+              path="/organisation/:orgNumber/individuals"
+              element={<OrganisationIndividualsPage />}
+            />
+            <Route
+              path="/organisation/:orgNumber/calendar"
+              element={<OrganisationCalendarPage />}
+            />
+            <Route
+              path="/organisation/:orgNumber/timesheets"
+              element={<OrganisationTimesheetsPage />}
+            />
+
+            {/* Grant detail routes */}
+            <Route
+              path="/grants/:orgNumber/:grantId"
+              element={<GrantViewPage />}
+            />
 
             {/* Fallback redirect */}
-            <Route path="*" element={<Navigate to="/calendar" replace />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Router>
 
         {initError && (
           <Box
             sx={{
-              position: 'fixed',
+              position: "fixed",
               bottom: 16,
               right: 16,
-              bgcolor: 'error.main',
-              color: 'white',
+              bgcolor: "error.main",
+              color: "white",
               p: 2,
               borderRadius: 1,
               maxWidth: 300,

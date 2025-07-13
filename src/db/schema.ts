@@ -1,4 +1,4 @@
-import Dexie, { Table } from 'dexie';
+import Dexie, { Table } from "dexie";
 
 // DynamoDB-compatible entity interfaces
 export interface Organisation {
@@ -25,6 +25,7 @@ export interface Grant {
   EndDate: string; // ISO date format
   ManagerUserID: string; // References Individuals.PK
   OrganisationID: string; // References Organisation.PK
+  TotalClaimableAmount?: number; // Total budget allocated by awarding body
 }
 
 export interface Workday {
@@ -33,10 +34,24 @@ export interface Workday {
   Workdays: Record<string, boolean>; // Object with date keys: { "2025-01-04": true, ... }
 }
 
+// Leave types supported by the system
+export type LeaveType =
+  | "work"
+  | "annual-leave"
+  | "sick-leave"
+  | "public-holiday"
+  | "other";
+
+export interface DayEntry {
+  hours: number; // Available hours for the day
+  type: LeaveType; // Type of day (work, leave, etc.)
+  note?: string; // Optional note for leave days
+}
+
 export interface WorkdayHours {
   PK: string; // UserID
   SK: string; // "WORKDAY_HOURS#YYYY" - e.g., "WORKDAY_HOURS#2025"
-  Hours: Record<string, number>; // Object with date keys: { "2025-01-04": 8, ... }
+  Hours: Record<string, number | DayEntry>; // Object with date keys: { "2025-01-04": 8, "2025-01-05": { hours: 0, type: "annual-leave", note: "Vacation" } }
 }
 
 export interface TimeSlot {
@@ -60,70 +75,72 @@ export class GrantTrackerDB extends Dexie {
   timeslots!: Table<TimeSlot>;
 
   constructor() {
-    super('grantTracker');
+    super("grantTracker");
 
     // Define schemas - Version 1 (original)
     this.version(1).stores({
       // Primary key only stores
-      individuals: 'PK',
-      grants: 'PK',
+      individuals: "PK",
+      grants: "PK",
 
       // Compound key stores (PK + SK)
-      workdays: '[PK+SK]',
-      workdayHours: '[PK+SK]',
+      workdays: "[PK+SK]",
+      workdayHours: "[PK+SK]",
 
       // TimeSlots with multiple indexes for DynamoDB GSI emulation
-      timeslots: '[PK+SK], PK, Date, [GrantID+Date], [Date+UserID]'
+      timeslots: "[PK+SK], PK, Date, [GrantID+Date], [Date+UserID]",
     });
 
     // Version 2 - Add organisations and organisational indexes
-    this.version(2).stores({
-      // Add organisations table
-      organisations: 'PK',
+    this.version(2)
+      .stores({
+        // Add organisations table
+        organisations: "PK",
 
-      // Update existing tables with organisational indexes
-      individuals: 'PK, OrganisationID',
-      grants: 'PK, OrganisationID',
+        // Update existing tables with organisational indexes
+        individuals: "PK, OrganisationID",
+        grants: "PK, OrganisationID",
 
-      // Keep existing compound key stores
-      workdays: '[PK+SK]',
-      workdayHours: '[PK+SK]',
+        // Keep existing compound key stores
+        workdays: "[PK+SK]",
+        workdayHours: "[PK+SK]",
 
-      // TimeSlots with multiple indexes for DynamoDB GSI emulation
-      timeslots: '[PK+SK], PK, Date, [GrantID+Date], [Date+UserID]'
-    }).upgrade(async (trans) => {
-      // Migration logic for existing data
-      console.log('Migrating database to version 2...');
+        // TimeSlots with multiple indexes for DynamoDB GSI emulation
+        timeslots: "[PK+SK], PK, Date, [GrantID+Date], [Date+UserID]",
+      })
+      .upgrade(async (trans) => {
+        // Migration logic for existing data
+        console.log("Migrating database to version 2...");
 
-      // Add default organisation
-      const defaultOrg: Organisation = {
-        PK: 'ORG-DEFAULT',
-        Name: 'Default Organisation',
-        CompanyNumber: '00000000',
-        CreatedDate: new Date().toISOString()
-      };
-      await trans.table('organisations').put(defaultOrg);
+        // Add default organisation
+        const defaultOrg: Organisation = {
+          PK: "ORG-DEFAULT",
+          Name: "Default Organisation",
+          CompanyNumber: "00000000",
+          CreatedDate: new Date().toISOString(),
+        };
+        await trans.table("organisations").put(defaultOrg);
 
-      // Update all individuals to have OrganisationID
-      const individuals = await trans.table('individuals').toArray();
-      for (const individual of individuals) {
-        if (!individual.OrganisationID) {
-          individual.OrganisationID = 'ORG-DEFAULT';
-          await trans.table('individuals').put(individual);
+        // Update all individuals to have OrganisationID
+        const individuals = await trans.table("individuals").toArray();
+        for (const individual of individuals) {
+          if (!individual.OrganisationID) {
+            individual.OrganisationID = "ORG-DEFAULT";
+            await trans.table("individuals").put(individual);
+          }
         }
-      }
 
-      // Update all grants to have OrganisationID
-      const grants = await trans.table('grants').toArray();
-      for (const grant of grants) {
-        if (!grant.OrganisationID) {
-          grant.OrganisationID = 'ORG-DEFAULT';
-          await trans.table('grants').put(grant);
+        // Update all grants to have OrganisationID
+        const grants = await trans.table("grants").toArray();
+        for (const grant of grants) {
+          if (!grant.OrganisationID) {
+            grant.OrganisationID = "ORG-DEFAULT";
+            await trans.table("grants").put(grant);
+          }
         }
-      }
 
-      console.log('Database migration to version 2 completed');
-    });
+        console.log("Database migration to version 2 completed");
+      });
   }
 }
 
@@ -135,7 +152,10 @@ export const generateWorkdayKey = (userId: string, year: number): string => {
   return `WORKDAYS#${year}`;
 };
 
-export const generateWorkdayHoursKey = (userId: string, year: number): string => {
+export const generateWorkdayHoursKey = (
+  userId: string,
+  year: number
+): string => {
   return `WORKDAY_HOURS#${year}`;
 };
 
@@ -144,13 +164,15 @@ export const generateTimeSlotKey = (date: string, grantId: string): string => {
 };
 
 // Helper functions for parsing keys
-export const parseTimeSlotKey = (sk: string): { date: string; grantId: string } => {
-  const [date, grantId] = sk.split('#');
+export const parseTimeSlotKey = (
+  sk: string
+): { date: string; grantId: string } => {
+  const [date, grantId] = sk.split("#");
   return { date, grantId };
 };
 
 export const parseWorkdayKey = (sk: string): { type: string; year: number } => {
-  const [type, yearStr] = sk.split('#');
+  const [type, yearStr] = sk.split("#");
   return { type, year: parseInt(yearStr, 10) };
 };
 
@@ -215,8 +237,13 @@ export interface TransactWriteParams {
 }
 
 // Business rule validation functions
-export const validateAllocationPercent = (allocations: Array<{ AllocationPercent: number }>): boolean => {
-  const total = allocations.reduce((sum, slot) => sum + slot.AllocationPercent, 0);
+export const validateAllocationPercent = (
+  allocations: Array<{ AllocationPercent: number }>
+): boolean => {
+  const total = allocations.reduce(
+    (sum, slot) => sum + slot.AllocationPercent,
+    0
+  );
   return total <= 100;
 };
 
@@ -230,3 +257,49 @@ export const validateHoursAllocated = (
 
 // Default available hours per workday
 export const DEFAULT_WORKDAY_HOURS = 8;
+
+// Helper functions for leave type system
+export const createWorkDayEntry = (
+  hours: number = DEFAULT_WORKDAY_HOURS
+): DayEntry => ({
+  hours,
+  type: "work",
+});
+
+export const createLeaveEntry = (type: LeaveType, note?: string): DayEntry => ({
+  hours: 0,
+  type,
+  note,
+});
+
+// Helper to get hours from a day entry (backward compatibility)
+export const getHoursFromDayEntry = (entry: number | DayEntry): number => {
+  if (typeof entry === "number") {
+    return entry; // Backward compatibility with old numeric format
+  }
+  return entry.hours;
+};
+
+// Helper to get leave type from a day entry
+export const getLeaveTypeFromDayEntry = (
+  entry: number | DayEntry
+): LeaveType => {
+  if (typeof entry === "number") {
+    return entry > 0 ? "work" : "work"; // Assume work day for backward compatibility
+  }
+  return entry.type;
+};
+
+// Helper to check if a day is a work day (has available hours for allocation)
+export const isWorkDay = (entry: number | DayEntry): boolean => {
+  return (
+    getHoursFromDayEntry(entry) > 0 &&
+    getLeaveTypeFromDayEntry(entry) === "work"
+  );
+};
+
+// Helper to check if a day is a leave day
+export const isLeaveDay = (entry: number | DayEntry): boolean => {
+  const type = getLeaveTypeFromDayEntry(entry);
+  return type !== "work";
+};

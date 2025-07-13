@@ -1,118 +1,135 @@
 import React, { useState } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
 import {
   AppBar,
   Toolbar,
   Typography,
   Drawer,
-  List,
-  ListItem,
-  ListItemButton,
-  ListItemIcon,
-  ListItemText,
   IconButton,
   Box,
-  Divider,
-  FormControl,
-  Select,
-  MenuItem,
   Button,
+  useMediaQuery,
+  useTheme,
 } from "@mui/material";
-import {
-  Menu as MenuIcon,
-  CalendarToday as CalendarIcon,
-  GridOn as GridIcon,
-  Person as PersonIcon,
-  Add as AddIcon,
-  Assignment as GrantIcon,
-  Business as OrganisationIcon,
-} from "@mui/icons-material";
+import { Menu as MenuIcon, Add as AddIcon } from "@mui/icons-material";
 // IndexedDB only - no legacy dependencies
-import { ViewMode } from "../../models/types";
 import { UserPicker } from "../UserPicker";
+import { DynamicSidebar } from "../DynamicSidebar";
+import { ContextSwitcher } from "../ContextSwitcher";
+import { ContextTransition } from "../ContextTransition";
 import { Individual } from "../../db/schema";
 import { CreateGrantModal } from "../CreateGrantModal";
+import { HeaderBreadcrumbs } from "../HeaderBreadcrumbs";
+import classes from "./EnhancedAppLayout.module.css";
 
 interface AppLayoutProps {
   children: React.ReactNode;
-  selectedUserId?: string | null;
-  onUserChange?: (userId: string, user: Individual) => void;
+  selectedUserId?: string | null; // Legacy support for single-select
+  selectedUserIds?: string[]; // Multi-select support
+  onUserChange?: (userId: string, user: Individual) => void; // Legacy support
+  onUsersChange?: (userIds: string[], users: Individual[]) => void; // Multi-select support
   organisationId?: string;
+  multiSelect?: boolean;
 }
 
 export const AppLayout: React.FC<AppLayoutProps> = ({
   children,
   selectedUserId,
+  selectedUserIds,
   onUserChange,
+  onUsersChange,
   organisationId,
+  multiSelect = true,
 }) => {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [createGrantModalOpen, setCreateGrantModalOpen] = useState(false);
-  const navigate = useNavigate();
-  const location = useLocation();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
+  const isTablet = useMediaQuery(theme.breakpoints.down("lg"));
 
   const toggleDrawer = () => {
     setDrawerOpen(!drawerOpen);
-  };
-
-  // Simplified navigation for IndexedDB mode
-  const handleNavigation = (path: string) => {
-    navigate(path);
-    setDrawerOpen(false);
   };
 
   return (
     <Box sx={{ display: "flex", height: "100vh" }}>
       <AppBar
         position="fixed"
+        className={classes.appBar}
         sx={{ zIndex: (theme) => theme.zIndex.drawer + 1 }}
       >
-        <Toolbar>
+        <Toolbar className={classes.toolbar}>
+          {/* Mobile Menu Button */}
           <IconButton
-            color="inherit"
+            className={classes.mobileMenuButton}
             aria-label="open drawer"
             onClick={toggleDrawer}
             edge="start"
-            sx={{ mr: 2 }}
           >
             <MenuIcon />
           </IconButton>
-          <Box sx={{ flexGrow: 1 }}>
-            <Typography variant="h6" noWrap component="div" sx={{ fontWeight: 600 }}>
-              GrantGrid
-            </Typography>
-            <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '0.7rem' }}>
-              Your workforce, mapped to funding
-            </Typography>
+
+          {/* Header Section */}
+          <Box className={classes.headerSection}>
+            {/* Brand Section */}
+            <Box className={classes.brandSection}>
+              <Typography className={classes.appTitle}>Grantura</Typography>
+              {!isMobile && (
+                <Typography className={classes.appSubtitle}>
+                  Your workforce, mapped to funding
+                </Typography>
+              )}
+            </Box>
+
+            {/* Breadcrumbs Section - Hide on mobile and tablet */}
+            {!isTablet && (
+              <Box className={classes.breadcrumbsSection}>
+                <HeaderBreadcrumbs
+                  flat={false}
+                  compact={isMobile}
+                  show={!isMobile}
+                />
+              </Box>
+            )}
           </Box>
 
-          {/* User Picker and Create Grant Button */}
-          {onUserChange && (
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-              <UserPicker
-                selectedUserId={selectedUserId || null}
-                onUserChange={onUserChange}
-                organisationId={organisationId}
-              />
+          {/* Navigation Controls */}
+          <Box className={classes.navigationControls}>
+            {/* Primary Controls */}
+            <Box className={classes.primaryControls}>
+              <ContextSwitcher compact={isMobile} />
 
-              <Button
-                variant="outlined"
-                size="small"
-                startIcon={<AddIcon />}
-                onClick={() => setCreateGrantModalOpen(true)}
-                sx={{
-                  color: 'white',
-                  borderColor: 'rgba(255, 255, 255, 0.5)',
-                  '&:hover': {
-                    borderColor: 'white',
-                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                  },
-                }}
-              >
-                Create Grant
-              </Button>
+              {/* Secondary User Control - Show based on context and screen size */}
+              {(onUserChange || onUsersChange) && !isMobile && (
+                <UserPicker
+                  selectedUserId={selectedUserId || null}
+                  selectedUserIds={selectedUserIds}
+                  onUserChange={onUserChange}
+                  onUsersChange={onUsersChange}
+                  organisationId={organisationId}
+                  compact={isTablet}
+                  showContextIndicator={false} // Context already shown in ContextSwitcher
+                  multiSelect={multiSelect}
+                />
+              )}
             </Box>
-          )}
+
+            {/* Action Buttons - Separated from navigation, hidden on mobile */}
+            {!isMobile && (
+              <Box className={classes.actionSection}>
+                {onUserChange && (
+                  <Button
+                    className={`${classes.actionButton} ${classes.primary}`}
+                    variant="outlined"
+                    size="small"
+                    startIcon={<AddIcon />}
+                    onClick={() => setCreateGrantModalOpen(true)}
+                  >
+                    {isTablet ? "Create" : "Create Grant"}
+                  </Button>
+                )}
+              </Box>
+            )}
+          </Box>
         </Toolbar>
       </AppBar>
 
@@ -120,102 +137,56 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
         variant="temporary"
         open={drawerOpen}
         onClose={toggleDrawer}
+        className={classes.drawer}
         ModalProps={{
           keepMounted: true, // Better open performance on mobile.
         }}
-        sx={{
-          "& .MuiDrawer-paper": {
-            boxSizing: "border-box",
-            width: 280,
-          },
+        PaperProps={{
+          className: classes.drawerPaper,
         }}
       >
-        <Toolbar />
-        <Box sx={{ overflow: "auto" }}>
-          <List>
-            <ListItem disablePadding>
-              <ListItemButton
-                selected={location.pathname === "/calendar"}
-                onClick={() => handleNavigation("/calendar")}
-              >
-                <ListItemIcon>
-                  <CalendarIcon />
-                </ListItemIcon>
-                <ListItemText primary="Calendar View" />
-              </ListItemButton>
-            </ListItem>
-            <ListItem disablePadding>
-              <ListItemButton
-                selected={location.pathname === "/grants"}
-                onClick={() => handleNavigation("/grants")}
-              >
-                <ListItemIcon>
-                  <GrantIcon />
-                </ListItemIcon>
-                <ListItemText primary="Grants" />
-              </ListItemButton>
-            </ListItem>
-            <ListItem disablePadding>
-              <ListItemButton
-                selected={location.pathname === "/organisations"}
-                onClick={() => handleNavigation("/organisations")}
-              >
-                <ListItemIcon>
-                  <OrganisationIcon />
-                </ListItemIcon>
-                <ListItemText primary="Organisations" />
-              </ListItemButton>
-            </ListItem>
-          </List>
-
-          {/* Debug: Test Organisation Link */}
-          <Divider />
-          <List>
-            <ListItem>
-              <ListItemText
-                primary="Debug: Test Organisation"
-                secondary="Click to test org routing"
-              />
-            </ListItem>
-            <ListItem disablePadding>
-              <ListItemButton
-                onClick={() => handleNavigation("/organisation/12345678")}
-              >
-                <ListItemIcon>
-                  <OrganisationIcon />
-                </ListItemIcon>
-                <ListItemText primary="Test Org (12345678)" />
-              </ListItemButton>
-            </ListItem>
-          </List>
-
-          <Divider />
-
-          <List>
-            <ListItem>
-              <ListItemIcon>
-                <PersonIcon />
-              </ListItemIcon>
-              <ListItemText
-                primary="IndexedDB Mode"
-                secondary="Using local database"
-              />
-            </ListItem>
-          </List>
+        <Box className={classes.drawerHeader}>
+          <IconButton onClick={toggleDrawer}>
+            <MenuIcon />
+          </IconButton>
         </Box>
+        <DynamicSidebar organizationId={organisationId} />
+
+        {/* Mobile Action Buttons - Show in drawer on mobile */}
+        {isMobile && (onUserChange || onUsersChange) && (
+          <Box sx={{ p: 2, borderTop: "1px solid rgba(0, 0, 0, 0.08)" }}>
+            <Button
+              variant="contained"
+              fullWidth
+              startIcon={<AddIcon />}
+              onClick={() => {
+                setCreateGrantModalOpen(true);
+                toggleDrawer();
+              }}
+              sx={{ mb: 1 }}
+            >
+              Create Grant
+            </Button>
+            {/* Mobile User Picker */}
+            <UserPicker
+              selectedUserId={selectedUserId || null}
+              selectedUserIds={selectedUserIds}
+              onUserChange={onUserChange}
+              onUsersChange={onUsersChange}
+              organisationId={organisationId}
+              compact={true}
+              showContextIndicator={true}
+              multiSelect={multiSelect}
+            />
+          </Box>
+        )}
       </Drawer>
 
-      <Box
-        component="main"
-        sx={{
-          flexGrow: 1,
-          p: 3,
-          mt: 8, // Account for AppBar height
-          height: "calc(100vh - 64px)",
-          backgroundColor: "#ffffff",
-        }}
-      >
-        {children}
+      <Box component="main" className={classes.mainContent}>
+        {/* Main Content with Context Transitions */}
+        <ContextTransition animateOnContextChange>
+          <Box className={classes.contentWrapper}>{children}</Box>
+        </ContextTransition>
       </Box>
 
       {/* Create Grant Modal */}

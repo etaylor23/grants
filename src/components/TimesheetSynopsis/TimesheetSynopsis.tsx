@@ -13,7 +13,6 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  Paper,
   Divider,
 } from "@mui/material";
 import {
@@ -23,6 +22,7 @@ import {
   Assignment as AssignmentIcon,
 } from "@mui/icons-material";
 import { format, eachDayOfInterval } from "date-fns";
+import { DayEntry, getHoursFromDayEntry } from "../../db/schema";
 import { useIndividuals } from "../../hooks/useLocalData";
 
 interface TimesheetSynopsisProps {
@@ -32,7 +32,7 @@ interface TimesheetSynopsisProps {
   endDate: Date;
   timeSlots: any[];
   grants: any[];
-  workdayHours: Record<string, number>;
+  workdayHours: Record<string, number | DayEntry>;
 }
 
 export const TimesheetSynopsis: React.FC<TimesheetSynopsisProps> = ({
@@ -63,7 +63,7 @@ export const TimesheetSynopsis: React.FC<TimesheetSynopsisProps> = ({
     startDate,
     endDate,
   });
-  
+
   // Calculate working days in the period (assuming 260 working days per year)
   const workingDaysPerYear = 260;
   const dailyRate = annualGross / workingDaysPerYear;
@@ -71,13 +71,14 @@ export const TimesheetSynopsis: React.FC<TimesheetSynopsisProps> = ({
 
   // Get all dates in the period
   const periodDays = eachDayOfInterval({ start: startDate, end: endDate });
-  const periodDates = periodDays.map(day => format(day, "yyyy-MM-dd"));
+  const periodDates = periodDays.map((day) => format(day, "yyyy-MM-dd"));
 
   // Calculate summary statistics
   const summary = useMemo(() => {
     // Total available hours
     const totalAvailableHours = periodDates.reduce((sum, date) => {
-      return sum + (workdayHours[date] || 0);
+      const workdayEntry = workdayHours[date];
+      return sum + (workdayEntry ? getHoursFromDayEntry(workdayEntry) : 0);
     }, 0);
 
     // Total allocated hours
@@ -86,44 +87,65 @@ export const TimesheetSynopsis: React.FC<TimesheetSynopsisProps> = ({
     }, 0);
 
     // Utilization percentage
-    const utilizationPercent = totalAvailableHours > 0 
-      ? (totalAllocatedHours / totalAvailableHours) * 100 
-      : 0;
+    const utilizationPercent =
+      totalAvailableHours > 0
+        ? (totalAllocatedHours / totalAvailableHours) * 100
+        : 0;
 
     // Grant breakdown
-    const grantBreakdown = grants.map((grant: any) => {
-      const grantSlots = timeSlots.filter((slot: any) => slot.GrantID === grant.PK);
-      const grantHours = grantSlots.reduce((sum, slot: any) => sum + (slot.HoursAllocated || 0), 0);
-      const grantValue = grantHours * hourlyRate;
-      const grantPercent = totalAllocatedHours > 0 ? (grantHours / totalAllocatedHours) * 100 : 0;
-      
-      return {
-        id: grant.PK,
-        title: grant.Title,
-        hours: grantHours,
-        value: grantValue,
-        percent: grantPercent,
-        dailyAverage: grantHours / periodDates.length,
-      };
-    }).filter(grant => grant.hours > 0).sort((a, b) => b.hours - a.hours);
+    const grantBreakdown = grants
+      .map((grant: any) => {
+        const grantSlots = timeSlots.filter(
+          (slot: any) => slot.GrantID === grant.PK
+        );
+        const grantHours = grantSlots.reduce(
+          (sum, slot: any) => sum + (slot.HoursAllocated || 0),
+          0
+        );
+        const grantValue = grantHours * hourlyRate;
+        const grantPercent =
+          totalAllocatedHours > 0
+            ? (grantHours / totalAllocatedHours) * 100
+            : 0;
+
+        return {
+          id: grant.PK,
+          title: grant.Title,
+          hours: grantHours,
+          value: grantValue,
+          percent: grantPercent,
+          dailyAverage: grantHours / periodDates.length,
+        };
+      })
+      .filter((grant) => grant.hours > 0)
+      .sort((a, b) => b.hours - a.hours);
 
     // Daily breakdown
-    const dailyBreakdown = periodDates.map(date => {
-      const daySlots = timeSlots.filter((slot: any) => slot.Date === date);
-      const dayHours = daySlots.reduce((sum, slot: any) => sum + (slot.HoursAllocated || 0), 0);
-      const availableHours = workdayHours[date] || 0;
-      const dayValue = dayHours * hourlyRate;
-      const dayUtilization = availableHours > 0 ? (dayHours / availableHours) * 100 : 0;
-      
-      return {
-        date,
-        hours: dayHours,
-        available: availableHours,
-        value: dayValue,
-        utilization: dayUtilization,
-        grants: daySlots.length,
-      };
-    }).filter(day => day.available > 0);
+    const dailyBreakdown = periodDates
+      .map((date) => {
+        const daySlots = timeSlots.filter((slot: any) => slot.Date === date);
+        const dayHours = daySlots.reduce(
+          (sum, slot: any) => sum + (slot.HoursAllocated || 0),
+          0
+        );
+        const workdayEntry = workdayHours[date];
+        const availableHours = workdayEntry
+          ? getHoursFromDayEntry(workdayEntry)
+          : 0;
+        const dayValue = dayHours * hourlyRate;
+        const dayUtilization =
+          availableHours > 0 ? (dayHours / availableHours) * 100 : 0;
+
+        return {
+          date,
+          hours: dayHours,
+          available: availableHours,
+          value: dayValue,
+          utilization: dayUtilization,
+          grants: daySlots.length,
+        };
+      })
+      .filter((day) => day.available > 0);
 
     return {
       totalAvailableHours,
@@ -138,24 +160,24 @@ export const TimesheetSynopsis: React.FC<TimesheetSynopsisProps> = ({
   }, [timeSlots, grants, workdayHours, periodDates, hourlyRate]);
 
   const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('en-GB', {
-      style: 'currency',
-      currency: 'GBP',
+    return new Intl.NumberFormat("en-GB", {
+      style: "currency",
+      currency: "GBP",
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     }).format(value);
   };
 
   const getUtilizationColor = (percent: number) => {
-    if (percent >= 90) return 'success';
-    if (percent >= 70) return 'warning';
-    return 'error';
+    if (percent >= 90) return "success";
+    if (percent >= 70) return "warning";
+    return "error";
   };
 
   // Loading and error states
   if (!individual) {
     return (
-      <Box sx={{ mt: 4, p: 3, textAlign: 'center' }}>
+      <Box sx={{ mt: 4, p: 3, textAlign: "center" }}>
         <Typography variant="h6" color="text.secondary">
           Loading individual data...
         </Typography>
@@ -165,12 +187,13 @@ export const TimesheetSynopsis: React.FC<TimesheetSynopsisProps> = ({
 
   if (timeSlots.length === 0 && grants.length === 0) {
     return (
-      <Box sx={{ mt: 4, p: 3, textAlign: 'center' }}>
+      <Box sx={{ mt: 4, p: 3, textAlign: "center" }}>
         <Typography variant="h6" color="text.secondary">
           No timesheet data available for this period
         </Typography>
         <Typography variant="body2" color="text.secondary">
-          Try selecting a different date range or ensure grants and time slots are properly configured.
+          Try selecting a different date range or ensure grants and time slots
+          are properly configured.
         </Typography>
       </Box>
     );
@@ -181,11 +204,11 @@ export const TimesheetSynopsis: React.FC<TimesheetSynopsisProps> = ({
       <Typography variant="h5" gutterBottom sx={{ fontWeight: 600, mb: 3 }}>
         📊 Timesheet Synopsis - {userName}
       </Typography>
-      
+
       <Typography variant="subtitle1" color="text.secondary" gutterBottom>
-        {format(startDate, "MMMM dd, yyyy")} - {format(endDate, "MMMM dd, yyyy")} 
-        • Annual Salary: {formatCurrency(annualGross)} 
-        • Hourly Rate: {formatCurrency(hourlyRate)}
+        {format(startDate, "MMMM dd, yyyy")} -{" "}
+        {format(endDate, "MMMM dd, yyyy")}• Annual Salary:{" "}
+        {formatCurrency(annualGross)}• Hourly Rate: {formatCurrency(hourlyRate)}
       </Typography>
 
       {/* Key Metrics Cards */}
@@ -193,7 +216,7 @@ export const TimesheetSynopsis: React.FC<TimesheetSynopsisProps> = ({
         <Grid item xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+              <Box sx={{ display: "flex", alignItems: "center", mb: 1 }}>
                 <ScheduleIcon color="primary" sx={{ mr: 1 }} />
                 <Typography variant="h6" component="div">
                   {summary.totalAllocatedHours.toFixed(1)}h
@@ -212,7 +235,7 @@ export const TimesheetSynopsis: React.FC<TimesheetSynopsisProps> = ({
         <Grid item xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+              <Box sx={{ display: "flex", alignItems: "center", mb: 1 }}>
                 <TrendingUpIcon color="primary" sx={{ mr: 1 }} />
                 <Typography variant="h6" component="div">
                   {summary.utilizationPercent.toFixed(1)}%
@@ -221,9 +244,9 @@ export const TimesheetSynopsis: React.FC<TimesheetSynopsisProps> = ({
               <Typography color="text.secondary" variant="body2">
                 Utilization Rate
               </Typography>
-              <LinearProgress 
-                variant="determinate" 
-                value={Math.min(summary.utilizationPercent, 100)} 
+              <LinearProgress
+                variant="determinate"
+                value={Math.min(summary.utilizationPercent, 100)}
                 color={getUtilizationColor(summary.utilizationPercent)}
                 sx={{ mt: 1 }}
               />
@@ -234,7 +257,7 @@ export const TimesheetSynopsis: React.FC<TimesheetSynopsisProps> = ({
         <Grid item xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+              <Box sx={{ display: "flex", alignItems: "center", mb: 1 }}>
                 <MoneyIcon color="primary" sx={{ mr: 1 }} />
                 <Typography variant="h6" component="div">
                   {formatCurrency(summary.totalValue)}
@@ -244,7 +267,10 @@ export const TimesheetSynopsis: React.FC<TimesheetSynopsisProps> = ({
                 Total Period Value
               </Typography>
               <Typography variant="caption" color="text.secondary">
-                {formatCurrency(summary.totalValue / (summary.workingDays || 1))}/day avg
+                {formatCurrency(
+                  summary.totalValue / (summary.workingDays || 1)
+                )}
+                /day avg
               </Typography>
             </CardContent>
           </Card>
@@ -253,7 +279,7 @@ export const TimesheetSynopsis: React.FC<TimesheetSynopsisProps> = ({
         <Grid item xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+              <Box sx={{ display: "flex", alignItems: "center", mb: 1 }}>
                 <AssignmentIcon color="primary" sx={{ mr: 1 }} />
                 <Typography variant="h6" component="div">
                   {summary.grantBreakdown.length}
@@ -304,10 +330,10 @@ export const TimesheetSynopsis: React.FC<TimesheetSynopsisProps> = ({
                           {formatCurrency(grant.value)}
                         </TableCell>
                         <TableCell align="right">
-                          <Chip 
+                          <Chip
                             label={`${grant.percent.toFixed(1)}%`}
                             size="small"
-                            color={grant.percent > 50 ? 'primary' : 'default'}
+                            color={grant.percent > 50 ? "primary" : "default"}
                           />
                         </TableCell>
                         <TableCell align="right">
@@ -337,7 +363,7 @@ export const TimesheetSynopsis: React.FC<TimesheetSynopsisProps> = ({
               <Typography variant="h6" gutterBottom>
                 Period Summary
               </Typography>
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
                 <Box>
                   <Typography variant="body2" color="text.secondary">
                     Working Days
@@ -346,9 +372,9 @@ export const TimesheetSynopsis: React.FC<TimesheetSynopsisProps> = ({
                     {summary.workingDays} days
                   </Typography>
                 </Box>
-                
+
                 <Divider />
-                
+
                 <Box>
                   <Typography variant="body2" color="text.secondary">
                     Average Utilization
@@ -356,16 +382,16 @@ export const TimesheetSynopsis: React.FC<TimesheetSynopsisProps> = ({
                   <Typography variant="h6">
                     {summary.utilizationPercent.toFixed(1)}%
                   </Typography>
-                  <LinearProgress 
-                    variant="determinate" 
-                    value={Math.min(summary.utilizationPercent, 100)} 
+                  <LinearProgress
+                    variant="determinate"
+                    value={Math.min(summary.utilizationPercent, 100)}
                     color={getUtilizationColor(summary.utilizationPercent)}
                     sx={{ mt: 1 }}
                   />
                 </Box>
-                
+
                 <Divider />
-                
+
                 <Box>
                   <Typography variant="body2" color="text.secondary">
                     Efficiency Metrics
@@ -374,7 +400,11 @@ export const TimesheetSynopsis: React.FC<TimesheetSynopsisProps> = ({
                     • {summary.averageHoursPerDay.toFixed(1)}h allocated/day
                   </Typography>
                   <Typography variant="body2">
-                    • {formatCurrency(summary.totalValue / (summary.workingDays || 1))}/day value
+                    •{" "}
+                    {formatCurrency(
+                      summary.totalValue / (summary.workingDays || 1)
+                    )}
+                    /day value
                   </Typography>
                   <Typography variant="body2">
                     • {summary.grantBreakdown.length} active grants
