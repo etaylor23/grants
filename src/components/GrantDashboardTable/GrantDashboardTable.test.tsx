@@ -118,6 +118,7 @@ describe("GrantDashboardTable", () => {
     organisation: mockOrganisation,
     timeSlots: mockTimeSlots,
     individuals: mockIndividuals,
+    costs: [], // Add empty costs array
     periodType: "monthly" as PeriodType,
   };
 

@@ -13,6 +13,7 @@
     "@fullcalendar/timegrid": "^6.1.17",
     "@mui/icons-material": "^5.15.3",
     "@mui/material": "^5.15.3",
+    "@mui/x-date-pickers": "^8.8.0",
     "@silevis/reactgrid": "^4.1.5",
     "@tanstack/react-query": "^5.17.0",
     "@tanstack/react-table": "^8.21.3",

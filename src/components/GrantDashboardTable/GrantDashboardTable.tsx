@@ -13,8 +13,11 @@ import {
   TableHead,
   TableRow,
   Typography,
+  Button,
+  Box,
 } from "@mui/material";
-import { Grant, Individual, TimeSlot } from "../../db/schema";
+import { Add as AddIcon } from "@mui/icons-material";
+import { Grant, Individual, TimeSlot, Cost } from "../../db/schema";
 import styles from "../../pages/GrantView.module.css";
 import { PeriodType, CostTypeRow } from "../../models/grantDashboard";
 import { CostDrillDownModal } from "../CostDrillDownModal";
@@ -28,19 +31,23 @@ interface GrantDashboardTableProps {
   grant: Grant;
   timeSlots: TimeSlot[];
   individuals: Individual[];
+  costs: Cost[];
   periodType: PeriodType;
   dateRangeFilter?: {
     startDate: Date;
     endDate: Date;
   };
+  onAddCosts?: () => void;
 }
 
 export const GrantDashboardTable: React.FC<GrantDashboardTableProps> = ({
   grant,
   timeSlots,
   individuals,
+  costs,
   periodType,
   dateRangeFilter,
+  onAddCosts,
 }) => {
   // Modal state for drill-down
   const [modalOpen, setModalOpen] = useState(false);
@@ -60,6 +67,7 @@ export const GrantDashboardTable: React.FC<GrantDashboardTableProps> = ({
       grantEndDate: grant.EndDate,
       timeSlotsCount: timeSlots.length,
       individualsCount: individuals.length,
+      costsCount: costs.length,
       periodType,
       timeSlotsSample: timeSlots.slice(0, 3).map((slot) => ({
         userId: slot.UserID,
@@ -81,6 +89,13 @@ export const GrantDashboardTable: React.FC<GrantDashboardTableProps> = ({
         PK: ind.PK,
         AnnualGross: ind.AnnualGross,
       })),
+      costs: costs.map((cost) => ({
+        PK: cost.PK,
+        GrantID: cost.GrantID,
+        Type: cost.Type,
+        Amount: cost.Amount,
+        InvoiceDate: cost.InvoiceDate,
+      })),
       periodType,
       dateRange: {
         startDate: dateRangeFilter
@@ -91,7 +106,7 @@ export const GrantDashboardTable: React.FC<GrantDashboardTableProps> = ({
           : grant.EndDate,
       },
     };
-  }, [grant, timeSlots, individuals, periodType, dateRangeFilter]);
+  }, [grant, timeSlots, individuals, costs, periodType, dateRangeFilter]);
 
   // Calculate cost type results
   const costTypeResults = useMemo(() => {
@@ -252,9 +267,31 @@ export const GrantDashboardTable: React.FC<GrantDashboardTableProps> = ({
       aria-labelledby="grant-table-heading"
     >
       <div className={styles.dashboardTableHeader}>
-        <h2 id="grant-table-heading" className={styles.dashboardTableTitle}>
-          Grant Cost Breakdown
-        </h2>
+        <Box
+          display="flex"
+          justifyContent="space-between"
+          alignItems="center"
+          width="100%"
+        >
+          <h2 id="grant-table-heading" className={styles.dashboardTableTitle}>
+            Grant Cost Breakdown
+          </h2>
+          {onAddCosts && (
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={onAddCosts}
+              sx={{
+                backgroundColor: "#1976d2",
+                "&:hover": {
+                  backgroundColor: "#1565c0",
+                },
+              }}
+            >
+              Add Costs
+            </Button>
+          )}
+        </Box>
       </div>
 
       <TableContainer>
@@ -323,6 +360,15 @@ export const GrantDashboardTable: React.FC<GrantDashboardTableProps> = ({
             FirstName: ind.FirstName,
             LastName: ind.LastName,
             AnnualGross: ind.AnnualGross,
+          }))}
+          costs={costs.map((cost) => ({
+            PK: cost.PK,
+            GrantID: cost.GrantID,
+            Type: cost.Type,
+            Name: cost.Name,
+            Description: cost.Description,
+            Amount: cost.Amount,
+            InvoiceDate: cost.InvoiceDate,
           }))}
           grantId={grant.PK}
         />

@@ -80,3 +80,40 @@ Editing a Workday → any TimeSlots for that day are added/removed in one Transa
 3. Implement a mock API layer
 4. Add the MUI AppBar and Drawer
 5. Write Jest tests for the calendar view and timesheet grid
+
+# Costs Feature Extension
+
+The application has been extended with a comprehensive costs management feature for tracking non-staff expenses:
+
+## Features
+
+- **Cost Types**: Materials, Subcontractors, Travel, Overheads, Capital
+- **Data Entry**: ReactGrid-based interface with validation and auto-save
+- **Integration**: Seamlessly integrated with existing grant dashboard and calculations
+- **Validation**: Comprehensive field validation with user-friendly error messages
+- **Reporting**: Period-based cost analysis and drill-down capabilities
+
+## Documentation
+
+See [docs/COSTS_FEATURE.md](docs/COSTS_FEATURE.md) for detailed documentation including:
+
+- Architecture overview
+- Component usage
+- API reference
+- Testing guidelines
+- Troubleshooting guide
+
+## Database Schema
+
+The costs feature uses a DynamoDB-compatible schema:
+
+```
+TABLE Costs (PK = CostID)
+- GrantID: References Grant.PK
+- Type: Cost type (Materials, Travel, etc.)
+- Name: Cost item name
+- Description: Detailed description
+- Amount: Cost in pence for precision
+- InvoiceDate: ISO date format
+- OrganisationID: References Organisation.PK
+```

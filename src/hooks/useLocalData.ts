@@ -1,5 +1,6 @@
 // IndexedDB data hooks for local storage
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Cost, CostType, generateCostId } from "../db/schema";
 
 export const useIndividuals = (organisationId?: string) => {
   return useQuery({
@@ -374,6 +375,141 @@ export const useCreateGrant = () => {
     },
     onError: (error) => {
       console.error("Create grant failed:", error);
+    },
+  });
+};
+
+// Costs hooks
+export const useCosts = (grantId?: string, organisationId?: string) => {
+  return useQuery({
+    queryKey: ["costs", grantId, organisationId],
+    queryFn: async () => {
+      const { db } = await import("../db/schema");
+      let costs = await db.costs.toArray();
+
+      // Filter by grant if specified
+      if (grantId) {
+        costs = costs.filter((cost) => cost.GrantID === grantId);
+      }
+
+      // Filter by organisation if specified
+      if (organisationId) {
+        costs = costs.filter((cost) => cost.OrganisationID === organisationId);
+      }
+
+      console.log("Loaded costs from IndexedDB:", costs);
+      return costs;
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+};
+
+export const useCreateCost = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (costData: {
+      grantId: string;
+      type: CostType;
+      name: string;
+      description: string;
+      amount: number; // in pence
+      invoiceDate: string;
+      organisationId: string;
+    }) => {
+      const { db } = await import("../db/schema");
+
+      const costId = generateCostId();
+
+      const cost: Cost = {
+        PK: costId,
+        GrantID: costData.grantId,
+        Type: costData.type,
+        Name: costData.name,
+        Description: costData.description,
+        Amount: costData.amount,
+        InvoiceDate: costData.invoiceDate,
+        CreatedDate: new Date().toISOString(),
+        OrganisationID: costData.organisationId,
+      };
+
+      await db.costs.put(cost);
+      return costId;
+    },
+    onSuccess: () => {
+      // Invalidate costs query to refresh the list
+      queryClient.invalidateQueries({ queryKey: ["costs"] });
+    },
+    onError: (error) => {
+      console.error("Create cost failed:", error);
+    },
+  });
+};
+
+export const useUpdateCost = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (costData: {
+      costId: string;
+      grantId?: string;
+      type?: CostType;
+      name?: string;
+      description?: string;
+      amount?: number; // in pence
+      invoiceDate?: string;
+      organisationId?: string;
+    }) => {
+      const { db } = await import("../db/schema");
+
+      // Get existing cost
+      const existingCost = await db.costs.get(costData.costId);
+      if (!existingCost) {
+        throw new Error(`Cost with ID ${costData.costId} not found`);
+      }
+
+      // Update only provided fields
+      const updatedCost: Cost = {
+        ...existingCost,
+        ...(costData.grantId && { GrantID: costData.grantId }),
+        ...(costData.type && { Type: costData.type }),
+        ...(costData.name && { Name: costData.name }),
+        ...(costData.description && { Description: costData.description }),
+        ...(costData.amount !== undefined && { Amount: costData.amount }),
+        ...(costData.invoiceDate && { InvoiceDate: costData.invoiceDate }),
+        ...(costData.organisationId && {
+          OrganisationID: costData.organisationId,
+        }),
+      };
+
+      await db.costs.put(updatedCost);
+      return costData.costId;
+    },
+    onSuccess: () => {
+      // Invalidate costs query to refresh the list
+      queryClient.invalidateQueries({ queryKey: ["costs"] });
+    },
+    onError: (error) => {
+      console.error("Update cost failed:", error);
+    },
+  });
+};
+
+export const useDeleteCost = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (costId: string) => {
+      const { db } = await import("../db/schema");
+      await db.costs.delete(costId);
+      return costId;
+    },
+    onSuccess: () => {
+      // Invalidate costs query to refresh the list
+      queryClient.invalidateQueries({ queryKey: ["costs"] });
+    },
+    onError: (error) => {
+      console.error("Delete cost failed:", error);
     },
   });
 };

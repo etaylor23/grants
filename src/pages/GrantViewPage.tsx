@@ -15,7 +15,9 @@ import {
   useOrganisations,
   useAllTimeSlots,
   useIndividuals,
+  useCosts,
 } from "../hooks/useLocalData";
+import { CostsModal } from "../components/CostsModal";
 import { PeriodType } from "../models/grantDashboard";
 
 interface GrantViewPageProps {}
@@ -25,6 +27,9 @@ export const GrantViewPage: React.FC<GrantViewPageProps> = () => {
     orgNumber: string;
     grantId: string;
   }>();
+
+  // Modal state
+  const [costsModalOpen, setCostsModalOpen] = useState(false);
 
   // Use PeriodSelector for enhanced date range filtering
   const { selectedPeriod, selectedPeriodOption, handlePeriodChange } =
@@ -45,6 +50,7 @@ export const GrantViewPage: React.FC<GrantViewPageProps> = () => {
     useAllTimeSlots();
   const { data: individuals = [], isLoading: individualsLoading } =
     useIndividuals();
+  const { data: costs = [], isLoading: costsLoading } = useCosts();
 
   // Find organisation by company number
   const organisation = organisations.find(
@@ -61,7 +67,11 @@ export const GrantViewPage: React.FC<GrantViewPageProps> = () => {
 
   // Loading state
   const isLoading =
-    grantsLoading || orgsLoading || timeSlotsLoading || individualsLoading;
+    grantsLoading ||
+    orgsLoading ||
+    timeSlotsLoading ||
+    individualsLoading ||
+    costsLoading;
 
   // Error handling
   if (grantsError) {
@@ -172,6 +182,7 @@ export const GrantViewPage: React.FC<GrantViewPageProps> = () => {
             grant={grant}
             timeSlots={timeSlots}
             individuals={individuals}
+            costs={costs}
             periodType={periodType}
             dateRangeFilter={
               selectedPeriodOption
@@ -181,6 +192,18 @@ export const GrantViewPage: React.FC<GrantViewPageProps> = () => {
                   }
                 : undefined
             }
+            onAddCosts={() => setCostsModalOpen(true)}
+          />
+        )}
+
+        {/* Costs Modal */}
+        {grant && organisation && (
+          <CostsModal
+            open={costsModalOpen}
+            onClose={() => setCostsModalOpen(false)}
+            grantId={grant.PK}
+            organisationId={organisation.PK}
+            grantTitle={grant.Title}
           />
         )}
       </div>

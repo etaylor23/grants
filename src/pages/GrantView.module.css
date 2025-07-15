@@ -194,6 +194,15 @@
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
+/* Costs Section */
+.costs-section {
+  margin-top: 3rem;
+  padding: 1.5rem;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  background-color: #fafafa;
+}
+
 /* Screen Reader Only */
 .sr-only {
   position: absolute;

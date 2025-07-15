@@ -1,0 +1,279 @@
+/* CostsModal Component Styles */
+
+/* Import ReactGrid styles */
+@import "@silevis/reactgrid/styles.css";
+
+/* Modal Paper */
+.modalPaper {
+  min-height: 60vh;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Modal Title */
+.modalTitle {
+  padding: 1.5rem 1.5rem 1rem 1.5rem;
+  border-bottom: 1px solid #e0e0e0;
+  background-color: #fafafa;
+}
+
+/* Modal Content */
+.modalContent {
+  padding: 1.5rem;
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+/* Costs Grid Header */
+.costsGridHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.costsGridHeader h6 {
+  color: #424242;
+  font-weight: 600;
+}
+
+/* Costs Grid Wrapper */
+.costsGridWrapper {
+  height: 400px;
+  overflow: auto;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  background-color: white;
+  position: relative;
+}
+
+/* ReactGrid Cell Styles */
+.costsGridWrapper :global(.rg-cell.editable-cell) {
+  background-color: #e3f2fd !important;
+  border: 1px solid #1976d2 !important;
+  cursor: pointer !important;
+}
+
+.costsGridWrapper :global(.rg-cell.editable-cell:hover) {
+  background-color: #bbdefb !important;
+  box-shadow: 0 2px 4px rgba(25, 118, 210, 0.2) !important;
+}
+
+.costsGridWrapper :global(.rg-cell.editable-cell:focus) {
+  background-color: #90caf9 !important;
+  outline: 2px solid #1976d2 !important;
+  outline-offset: -2px !important;
+}
+
+.costsGridWrapper :global(.rg-cell.currency-cell) {
+  background-color: #e8f5e8 !important;
+  border: 1px solid #4caf50 !important;
+  color: #2e7d32 !important;
+  font-weight: 600 !important;
+  text-align: right !important;
+}
+
+.costsGridWrapper :global(.rg-cell.date-cell) {
+  background-color: #fff3e0 !important;
+  border: 1px solid #ff9800 !important;
+  color: #e65100 !important;
+  text-align: center !important;
+}
+
+.costsGridWrapper :global(.rg-cell.action-cell) {
+  background-color: #ffebee !important;
+  border: 1px solid #f44336 !important;
+  color: #c62828 !important;
+  cursor: pointer !important;
+  text-align: center !important;
+  font-weight: 600 !important;
+}
+
+.costsGridWrapper :global(.rg-cell.action-cell:hover) {
+  background-color: #ffcdd2 !important;
+  box-shadow: 0 2px 4px rgba(244, 67, 54, 0.2) !important;
+}
+
+.costsGridWrapper :global(.rg-cell.dropdown-cell) {
+  cursor: pointer !important;
+  position: relative !important;
+  padding: 0 !important;
+}
+
+.costsGridWrapper :global(.rg-cell) {
+  border: 1px solid #e0e0e0 !important;
+  transition: all 0.2s ease-in-out !important;
+  font-size: 0.875rem !important;
+}
+
+.costsGridWrapper :global(.rg-cell.rg-header) {
+  background-color: #f5f5f5 !important;
+  font-weight: 600 !important;
+  border: 1px solid #d0d0d0 !important;
+  color: #424242 !important;
+  text-align: center !important;
+}
+
+/* Empty State */
+.emptyState {
+  padding: 2rem;
+  text-align: center;
+}
+
+/* Modal Actions */
+.modalActions {
+  padding: 1rem 1.5rem;
+  border-top: 1px solid #e0e0e0;
+  background-color: #fafafa;
+  justify-content: flex-end;
+}
+
+/* Dropdown Styles */
+.costsGridWrapper :global(.rg-dropdown) {
+  width: 100% !important;
+  min-height: 32px !important;
+  position: relative !important;
+  display: flex !important;
+  align-items: center !important;
+  background: transparent !important;
+  border: none !important;
+  font-size: 0.875rem !important;
+  line-height: 1.2 !important;
+}
+
+.costsGridWrapper :global(.rg-dropdown-button) {
+  width: 100% !important;
+  height: 100% !important;
+  background: transparent !important;
+  border: none !important;
+  text-align: left !important;
+  padding: 0 24px 0 0 !important;
+  font-size: inherit !important;
+  color: inherit !important;
+  cursor: pointer !important;
+  display: flex !important;
+  align-items: center !important;
+  outline: none !important;
+}
+
+.costsGridWrapper :global(.rg-dropdown-list) {
+  position: absolute !important;
+  top: 100% !important;
+  left: 0 !important;
+  right: 0 !important;
+  background: white !important;
+  border: 1px solid #ccc !important;
+  border-radius: 4px !important;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1) !important;
+  z-index: 1000 !important;
+  max-height: 200px !important;
+  overflow-y: auto !important;
+  margin-top: 1px !important;
+  min-width: 100% !important;
+}
+
+.costsGridWrapper :global(.rg-dropdown-option) {
+  padding: 8px 12px !important;
+  font-size: 0.875rem !important;
+  cursor: pointer !important;
+  border-bottom: 1px solid #f0f0f0 !important;
+  background: white !important;
+  color: #333 !important;
+  transition: background-color 0.2s ease !important;
+  user-select: none !important;
+  white-space: nowrap !important;
+}
+
+.costsGridWrapper :global(.rg-dropdown-option:hover) {
+  background: #f5f5f5 !important;
+  color: #1976d2 !important;
+}
+
+.costsGridWrapper :global(.rg-dropdown-option.rg-dropdown-option-selected) {
+  background: #e3f2fd !important;
+  color: #1976d2 !important;
+  font-weight: 600 !important;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .modalPaper {
+    margin: 8px;
+    max-height: calc(100vh - 16px);
+  }
+
+  .modalTitle {
+    padding: 1rem;
+  }
+
+  .modalContent {
+    padding: 1rem;
+    gap: 1rem;
+  }
+
+  .costsGridWrapper {
+    height: 300px;
+  }
+
+  .costsGridWrapper :global(.rg-cell) {
+    font-size: 0.75rem !important;
+    padding: 4px !important;
+  }
+
+  .modalActions {
+    padding: 0.75rem 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .costsGridWrapper :global(.rg-cell) {
+    font-size: 0.7rem !important;
+    padding: 2px !important;
+  }
+}
+
+/* Success States */
+.successHighlight {
+  background-color: rgba(76, 175, 80, 0.1) !important;
+  transition: background-color 0.3s ease;
+}
+
+/* Animation for new rows */
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.newRow {
+  animation: slideIn 0.3s ease-out;
+}
+
+/* Improved scrollbar styling */
+.costsGridWrapper::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.costsGridWrapper::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.costsGridWrapper::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+}
+
+.costsGridWrapper::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}

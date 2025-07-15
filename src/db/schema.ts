@@ -64,6 +64,41 @@ export interface TimeSlot {
   UserID: string; // User ID for indexing
 }
 
+/**
+ * Cost types supported by the grants system for non-staff expenses
+ */
+export type CostType =
+  | "Materials"
+  | "Subcontractors"
+  | "Travel"
+  | "Overheads"
+  | "Capital";
+
+/**
+ * Cost interface for tracking non-staff expenses in grants
+ * Designed for DynamoDB compatibility with proper indexing
+ */
+export interface Cost {
+  /** Primary key - Cost ID (e.g., "C-12345") */
+  PK: string;
+  /** Grant ID this cost is associated with - References Grant.PK */
+  GrantID: string;
+  /** Type of cost from the supported cost types */
+  Type: CostType;
+  /** Human-readable name for the cost item */
+  Name: string;
+  /** Detailed description of the cost */
+  Description: string;
+  /** Cost amount in pence for precision (e.g., 10000 = £100.00) */
+  Amount: number;
+  /** Invoice date in ISO format (YYYY-MM-DD) */
+  InvoiceDate: string;
+  /** Creation timestamp in ISO format */
+  CreatedDate: string;
+  /** Organisation ID this cost belongs to - References Organisation.PK */
+  OrganisationID: string;
+}
+
 // Dexie database class
 export class GrantTrackerDB extends Dexie {
   // Declare tables
@@ -73,6 +108,7 @@ export class GrantTrackerDB extends Dexie {
   workdays!: Table<Workday>;
   workdayHours!: Table<WorkdayHours>;
   timeslots!: Table<TimeSlot>;
+  costs!: Table<Cost>;
 
   constructor() {
     super("grantTracker");
@@ -141,6 +177,25 @@ export class GrantTrackerDB extends Dexie {
 
         console.log("Database migration to version 2 completed");
       });
+
+    // Version 3: Add costs table
+    this.version(3).stores({
+      // Primary key only stores
+      individuals: "PK",
+      grants: "PK",
+      organisations: "PK",
+
+      // Compound key stores (PK + SK)
+      workdays: "[PK+SK]",
+      workdayHours: "[PK+SK]",
+
+      // TimeSlots with multiple indexes for DynamoDB GSI emulation
+      timeslots: "[PK+SK], PK, Date, [GrantID+Date], [Date+UserID]",
+
+      // Costs with indexes for efficient querying
+      costs:
+        "PK, GrantID, [GrantID+InvoiceDate], [OrganisationID+GrantID], Type",
+    });
   }
 }
 
@@ -161,6 +216,15 @@ export const generateWorkdayHoursKey = (
 
 export const generateTimeSlotKey = (date: string, grantId: string): string => {
   return `${date}#${grantId}`;
+};
+
+/**
+ * Generates a unique cost ID using timestamp
+ * @returns A unique cost ID in format "C-{timestamp}"
+ */
+export const generateCostId = (): string => {
+  const timestamp = Date.now();
+  return `C-${timestamp}`;
 };
 
 // Helper functions for parsing keys

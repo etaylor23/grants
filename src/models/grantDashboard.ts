@@ -1,8 +1,14 @@
 // Grant Dashboard specific types and interfaces
 
-export type CostType = 'Staff' | 'Overheads' | 'Materials' | 'Capital' | 'Travel' | 'Other';
+export type CostType =
+  | "Staff"
+  | "Overheads"
+  | "Materials"
+  | "Capital"
+  | "Travel"
+  | "Other";
 
-export type PeriodType = 'monthly' | 'quarterly';
+export type PeriodType = "monthly" | "quarterly";
 
 export interface PeriodColumn {
   id: string;
@@ -43,6 +49,13 @@ export interface GrantCalculationInput {
     PK: string;
     AnnualGross: number;
   }>;
+  costs: Array<{
+    PK: string;
+    GrantID: string;
+    Type: string;
+    Amount: number; // in pence
+    InvoiceDate: string;
+  }>;
   periodType: PeriodType;
   dateRange: {
     startDate: string;
@@ -68,12 +81,12 @@ export interface CostTypeCalculationResult {
 
 // Default cost types with initial zero values
 export const DEFAULT_COST_TYPES: CostType[] = [
-  'Staff',
-  'Overheads', 
-  'Materials',
-  'Capital',
-  'Travel',
-  'Other'
+  "Staff",
+  "Overheads",
+  "Materials",
+  "Capital",
+  "Travel",
+  "Other",
 ];
 
 // Helper function to create empty cost type row
