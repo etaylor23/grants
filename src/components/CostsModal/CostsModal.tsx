@@ -264,7 +264,15 @@ export const CostsModal: React.FC<CostsModalProps> = ({
   // Handle cell changes in ReactGrid
   const handleChanges = useCallback(
     async (changes: any[]) => {
-      console.log("🎯 CostsModal handleChanges called with:", changes);
+      console.log(
+        "🎯 CostsModal handleChanges called with:",
+        changes.length,
+        "changes"
+      );
+
+      // Build a batch of all changes to process together
+      const changeBatch = new Map<string, PendingCostChanges>();
+      let hasValidationErrors = false;
 
       for (const change of changes) {
         const { rowId, columnId, newCell, previousCell } = change;
@@ -401,42 +409,63 @@ export const CostsModal: React.FC<CostsModalProps> = ({
         if (validationError) {
           console.error("❌ Validation error:", validationError);
           setError(validationError);
+          hasValidationErrors = true;
           continue;
         }
 
         console.log("✅ Validation passed for:", { fieldKey, newValue });
 
-        // Update pending changes
-        const existingChanges = pendingChanges.get(rowId) || {};
-        const updatedChanges = {
+        // Add to batch changes
+        const existingChanges = changeBatch.get(rowId) || {};
+        changeBatch.set(rowId, {
           ...existingChanges,
           [fieldKey]: newValue,
-        };
-
-        console.log("📝 Updating pending changes:", {
-          rowId,
-          existingChanges,
-          updatedChanges,
         });
-
-        setPendingChanges((prev) => {
-          const newMap = new Map(prev);
-          newMap.set(rowId, updatedChanges);
-          return newMap;
-        });
-
-        // Trigger auto-save with debounce
-        if (autoSaveTimeoutRef.current) {
-          clearTimeout(autoSaveTimeoutRef.current);
-          console.log("⏰ Clearing existing auto-save timeout");
-        }
-
-        console.log("⏰ Setting auto-save timeout for 1 second");
-        autoSaveTimeoutRef.current = setTimeout(async () => {
-          console.log("💾 Auto-save triggered for cost:", rowId);
-          await saveChanges(new Map([[rowId, updatedChanges]]));
-        }, 1000);
       }
+
+      // If there are validation errors, don't process any changes
+      if (hasValidationErrors) {
+        console.log("❌ Skipping batch due to validation errors");
+        return;
+      }
+
+      // If no changes to process, return early
+      if (changeBatch.size === 0) {
+        console.log("⏭️ No valid changes to process");
+        return;
+      }
+
+      console.log("📦 Processing batch of", changeBatch.size, "cost changes");
+
+      // Update pending changes state with all batch changes
+      setPendingChanges((prev) => {
+        const newMap = new Map(prev);
+        const entries = Array.from(changeBatch.entries());
+        for (const [rowId, changes] of entries) {
+          const existingChanges = newMap.get(rowId) || {};
+          newMap.set(rowId, {
+            ...existingChanges,
+            ...changes,
+          });
+        }
+        return newMap;
+      });
+
+      // Trigger auto-save with debounce for the entire batch
+      if (autoSaveTimeoutRef.current) {
+        clearTimeout(autoSaveTimeoutRef.current);
+        console.log("⏰ Clearing existing auto-save timeout");
+      }
+
+      console.log("⏰ Setting auto-save timeout for batch (1 second)");
+      autoSaveTimeoutRef.current = setTimeout(async () => {
+        console.log(
+          "💾 Auto-save triggered for batch:",
+          changeBatch.size,
+          "changes"
+        );
+        await saveChanges(changeBatch);
+      }, 1000);
     },
     [
       costs,
