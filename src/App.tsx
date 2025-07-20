@@ -22,7 +22,6 @@ import { OrganisationCalendarPage } from "./pages/OrganisationCalendarPage";
 import { OrganisationTimesheetsPage } from "./pages/OrganisationTimesheetsPage";
 import { GrantViewPage } from "./pages/GrantViewPage";
 import { initializeDatabase } from "./db/index";
-import { isDexieBackend } from "./config/environment";
 
 const queryClient = new QueryClient({
   defaultOptions: {

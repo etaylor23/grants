@@ -40,6 +40,8 @@ jest.mock("../UserPicker", () => ({
       data-multi-select={multiSelect}
       data-selected-user-id={selectedUserId}
       data-selected-user-ids={selectedUserIds?.join(",")}
+      role="button"
+      tabIndex={0}
       onClick={() => {
         if (multiSelect && onUsersChange) {
           onUsersChange(
@@ -48,6 +50,19 @@ jest.mock("../UserPicker", () => ({
           );
         } else if (onUserChange) {
           onUserChange("test-user", { id: "test-user" });
+        }
+      }}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          if (multiSelect && onUsersChange) {
+            onUsersChange(
+              ["test-user-1", "test-user-2"],
+              [{ id: "test-user-1" }, { id: "test-user-2" }]
+            );
+          } else if (onUserChange) {
+            onUserChange("test-user", { id: "test-user" });
+          }
         }
       }}
     >
@@ -94,7 +109,18 @@ jest.mock("../CreateGrantModal", () => ({
     onClose: () => void;
   }) =>
     open ? (
-      <div data-testid="create-grant-modal" onClick={onClose}>
+      <div
+        data-testid="create-grant-modal"
+        role="button"
+        tabIndex={0}
+        onClick={onClose}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            onClose();
+          }
+        }}
+      >
         Create Grant Modal
       </div>
     ) : null,

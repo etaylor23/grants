@@ -11,8 +11,16 @@ jest.mock("../../utils/grantCalculations", () => ({
   formatHours: jest.fn((hours: number) => `${hours.toFixed(1)}h`),
 }));
 
+// Mock the grantCalculations module
+jest.mock("../../utils/grantCalculations", () => ({
+  calculateCostTypeResults: jest.fn(),
+}));
+
+import { calculateCostTypeResults } from "../../utils/grantCalculations";
 const mockCalculateCostTypeResults =
-  require("../../utils/grantCalculations").calculateCostTypeResults;
+  calculateCostTypeResults as jest.MockedFunction<
+    typeof calculateCostTypeResults
+  >;
 
 describe("GrantDashboardTable", () => {
   const mockGrant: Grant = {

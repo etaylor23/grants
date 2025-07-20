@@ -1,9 +1,7 @@
 import {
   eachMonthOfInterval,
   eachQuarterOfInterval,
-  startOfMonth,
   endOfMonth,
-  startOfQuarter,
   endOfQuarter,
   format,
   isWithinInterval,
@@ -91,14 +89,15 @@ export const calculateStaffPeriodTotals = (
   periodStart: Date,
   periodEnd: Date
 ): { totalHours: number; totalValue: number } => {
-  console.log("calculatePeriodTotals called with:", {
-    timeSlotsCount: timeSlots.length,
-    individualsCount: individuals.length,
-    grantId,
-    periodStart: format(periodStart, "yyyy-MM-dd"),
-    periodEnd: format(periodEnd, "yyyy-MM-dd"),
-    timeSlots: timeSlots.slice(0, 3), // Show first 3 for debugging
-  });
+  // Debug logging for period totals calculation
+  // console.log("calculatePeriodTotals called with:", {
+  //   timeSlotsCount: timeSlots.length,
+  //   individualsCount: individuals.length,
+  //   grantId,
+  //   periodStart: format(periodStart, "yyyy-MM-dd"),
+  //   periodEnd: format(periodEnd, "yyyy-MM-dd"),
+  //   timeSlots: timeSlots.slice(0, 3), // Show first 3 for debugging
+  // });
 
   // Filter time slots for this grant and period
   const relevantSlots = timeSlots.filter((slot) => {

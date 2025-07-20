@@ -29,7 +29,10 @@
       "version": "detect"
     },
     "import/resolver": {
-      "typescript": {},
+      "typescript": {
+        "alwaysTryTypes": true,
+        "project": "./tsconfig.json"
+      },
       "node": {
         "paths": ["src"],
         "extensions": [".js", ".jsx", ".ts", ".tsx"]
@@ -43,7 +46,6 @@
     "vitest.global-setup.ts"
   ],
   "rules": {
-    "no-console": ["warn", { "allow": ["warn", "error"] }],
     "react/prop-types": "off",
     "import/prefer-default-export": "off",
     "react-hooks/rules-of-hooks": "error",
@@ -75,6 +77,22 @@
         "varsIgnorePattern": "^_",
         "caughtErrorsIgnorePattern": "^_"
       }
-    ]
-  }
+    ],
+    "import/no-unresolved": "off",
+    "import/namespace": "off",
+    "import/named": "off"
+  },
+  "overrides": [
+    {
+      "files": [
+        "**/*.test.ts",
+        "**/*.test.tsx",
+        "**/*.spec.ts",
+        "**/*.spec.tsx"
+      ],
+      "rules": {
+        "@typescript-eslint/no-var-requires": "off"
+      }
+    }
+  ]
 }
