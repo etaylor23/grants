@@ -45,5 +45,6 @@ export const generateConsistentColor = (name: string): string => {
 };
 
 // Legacy function aliases for backward compatibility
+// Note: These are kept for backward compatibility but should use generateConsistentColor directly
 export const generateUserColor = generateConsistentColor;
 export const generatePastelColor = generateConsistentColor;

@@ -41,13 +41,14 @@ export const LeaveTypeSelector: React.FC<LeaveTypeSelectorProps> = ({
   label = "Day Type",
 }) => {
   // Convert legacy number format to DayEntry
-  const currentEntry: DayEntry = typeof value === "number" 
-    ? { hours: value, type: value > 0 ? "work" : "work" }
-    : value;
+  const currentEntry: DayEntry =
+    typeof value === "number"
+      ? { hours: value, type: value > 0 ? "work" : "work" }
+      : value;
 
   const handleTypeChange = (event: SelectChangeEvent<LeaveType>) => {
     const newType = event.target.value as LeaveType;
-    
+
     if (newType === "work") {
       onChange({
         hours: 8, // Default work hours
@@ -78,7 +79,9 @@ export const LeaveTypeSelector: React.FC<LeaveTypeSelectorProps> = ({
   };
 
   return (
-    <Box sx={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 200 }}>
+    <Box
+      sx={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 200 }}
+    >
       {/* Leave Type Selector */}
       <FormControl fullWidth size="small" disabled={disabled}>
         <InputLabel>{label}</InputLabel>
@@ -94,10 +97,10 @@ export const LeaveTypeSelector: React.FC<LeaveTypeSelectorProps> = ({
           }}
         >
           {Object.entries(LEAVE_TYPE_LABELS).map(([type, label]) => (
-            <MenuItem 
-              key={type} 
+            <MenuItem
+              key={type}
               value={type}
-              sx={{ 
+              sx={{
                 color: LEAVE_TYPE_COLORS[type as LeaveType],
                 fontWeight: 500,
               }}
@@ -138,24 +141,27 @@ export const LeaveTypeSelector: React.FC<LeaveTypeSelectorProps> = ({
       )}
 
       {/* Summary Display */}
-      <Box sx={{ 
-        p: 1, 
-        backgroundColor: "grey.50", 
-        borderRadius: 1,
-        border: `1px solid ${LEAVE_TYPE_COLORS[currentEntry.type]}20`,
-      }}>
+      <Box
+        sx={{
+          p: 1,
+          backgroundColor: "grey.50",
+          borderRadius: 1,
+          border: `1px solid ${LEAVE_TYPE_COLORS[currentEntry.type]}20`,
+        }}
+      >
         <Typography variant="caption" color="text.secondary">
           Summary:
         </Typography>
-        <Typography 
-          variant="body2" 
-          sx={{ 
+        <Typography
+          variant="body2"
+          sx={{
             color: LEAVE_TYPE_COLORS[currentEntry.type],
             fontWeight: 500,
           }}
         >
           {LEAVE_TYPE_LABELS[currentEntry.type]}
-          {currentEntry.type === "work" && ` (${currentEntry.hours}h available)`}
+          {currentEntry.type === "work" &&
+            ` (${currentEntry.hours}h available)`}
           {currentEntry.type !== "work" && " (No work hours)"}
         </Typography>
         {currentEntry.note && (
@@ -167,5 +173,3 @@ export const LeaveTypeSelector: React.FC<LeaveTypeSelectorProps> = ({
     </Box>
   );
 };
-
-export default LeaveTypeSelector;

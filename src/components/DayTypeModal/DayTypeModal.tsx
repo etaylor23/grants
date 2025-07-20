@@ -13,7 +13,12 @@ import {
 import CloseIcon from "@mui/icons-material/Close";
 import { format } from "date-fns";
 import { LeaveTypeSelector } from "../LeaveTypeSelector";
-import { DayEntry, LeaveType, createWorkDayEntry, createLeaveEntry } from "../../db/schema";
+import {
+  DayEntry,
+  LeaveType,
+  createWorkDayEntry,
+  createLeaveEntry,
+} from "../../db/schema";
 
 interface DayTypeModalProps {
   open: boolean;
@@ -151,38 +156,36 @@ export const DayTypeModal: React.FC<DayTypeModalProps> = ({
         />
 
         {/* Impact Information */}
-        <Box sx={{ 
-          mt: 3, 
-          p: 2, 
-          backgroundColor: "grey.50", 
-          borderRadius: 1,
-          border: `1px solid ${getLeaveTypeColor(entry.type)}20`,
-        }}>
+        <Box
+          sx={{
+            mt: 3,
+            p: 2,
+            backgroundColor: "grey.50",
+            borderRadius: 1,
+            border: `1px solid ${getLeaveTypeColor(entry.type)}20`,
+          }}
+        >
           <Typography variant="subtitle2" gutterBottom>
             Impact on Timesheet:
           </Typography>
           {entry.type === "work" ? (
             <Typography variant="body2" color="text.secondary">
-              • {entry.hours} hours will be available for grant allocation
-              • This day will appear as editable in timesheet grids
-              • Utilization calculations will include this day
+              • {entry.hours} hours will be available for grant allocation •
+              This day will appear as editable in timesheet grids • Utilization
+              calculations will include this day
             </Typography>
           ) : (
             <Typography variant="body2" color="text.secondary">
-              • No hours available for grant allocation
-              • This day will be marked as leave in timesheet grids
-              • Utilization calculations will exclude this day
+              • No hours available for grant allocation • This day will be
+              marked as leave in timesheet grids • Utilization calculations will
+              exclude this day
             </Typography>
           )}
         </Box>
       </DialogContent>
 
       <DialogActions sx={{ p: 2 }}>
-        <Button 
-          onClick={handleClose} 
-          disabled={saving}
-          color="inherit"
-        >
+        <Button onClick={handleClose} disabled={saving} color="inherit">
           Cancel
         </Button>
         <Button
@@ -203,5 +206,3 @@ export const DayTypeModal: React.FC<DayTypeModalProps> = ({
     </Dialog>
   );
 };
-
-export default DayTypeModal;

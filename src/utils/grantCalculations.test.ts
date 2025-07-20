@@ -123,6 +123,7 @@ describe("grantCalculations", () => {
         },
       ],
       individuals: [{ PK: "user1", AnnualGross: 52000 }],
+      costs: [],
       periodType: "monthly" as PeriodType,
       dateRange: {
         startDate: "2024-01-01",
@@ -154,6 +155,7 @@ describe("grantCalculations", () => {
         },
       ],
       individuals: [{ PK: "user1", AnnualGross: 52000 }],
+      costs: [],
       periodType: "monthly" as PeriodType,
       dateRange: {
         startDate: "2024-01-01",

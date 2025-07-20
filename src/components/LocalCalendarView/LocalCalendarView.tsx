@@ -8,7 +8,7 @@ import {
   useWorkdayHours,
   useTimeSlots,
   useGrants,
-} from "../../hooks/useLocalData";
+ useSaveWorkdayHours } from "../../hooks/useLocalData";
 import {
   format,
   startOfMonth,
@@ -20,7 +20,6 @@ import { generateConsistentColor } from "../../utils/colors";
 import { getHoursFromDayEntry } from "../../db/schema";
 import { EnhancedTimesheetModal } from "../EnhancedTimesheetModal";
 import { DayTypeModal } from "../DayTypeModal";
-import { useSaveWorkdayHours } from "../../hooks/useLocalData";
 // import styles from "../Layout/ModernContainer.module.css"; // Unused for now
 
 interface LocalCalendarViewProps {

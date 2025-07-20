@@ -131,7 +131,7 @@ export class LocalDynamoDB {
       // In a real implementation, you'd parse the KeyConditionExpression
 
       // Get all items from a table based on the query
-      let items: any[] = [];
+      const items: any[] = [];
 
       // This is a simplified implementation
       // You would need to implement proper query parsing for production

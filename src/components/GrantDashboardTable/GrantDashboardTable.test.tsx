@@ -239,6 +239,7 @@ describe("GrantDashboardTable", () => {
           AnnualGross: 52000,
         },
       ],
+      costs: [],
       periodType: "monthly",
       dateRange: {
         startDate: "2024-01-01",

@@ -19,13 +19,12 @@ import {
 import { Add as AddIcon } from "@mui/icons-material";
 import { Grant, Individual, TimeSlot, Cost } from "../../db/schema";
 import styles from "../../pages/GrantView.module.css";
-import { PeriodType, CostTypeRow } from "../../models/grantDashboard";
+import { PeriodType, CostTypeRow , GrantCalculationInput } from "../../models/grantDashboard";
 import { CostDrillDownModal } from "../CostDrillDownModal";
 import {
   calculateCostTypeResults,
   formatCurrency,
 } from "../../utils/grantCalculations";
-import { GrantCalculationInput } from "../../models/grantDashboard";
 
 interface GrantDashboardTableProps {
   grant: Grant;
